@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+sqlalchemy
+asyncpg
+psycopg2-binary
+alembic
+pydantic
+python-jose
+passlib[bcrypt]
+python-multipart
+python-dotenv
+httpx
+pgvector
+openai
+langchain
+langgraph
+pytest
