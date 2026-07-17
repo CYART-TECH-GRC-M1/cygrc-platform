@@ -885,3 +885,88 @@ CREATE TRIGGER trg_users_updated
 BEFORE UPDATE ON users
 FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
+
+CREATE TRIGGER trg_users_updated
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
+
+/*==============================================================
+=            ROW LEVEL SECURITY (RLS)
+==============================================================*/
+
+-- Enable Row Level Security
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE risks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE risk_assessments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE risk_treatments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE evidence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE evidence_files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE evidence_reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_findings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_evidence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE policies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE policy_acknowledgements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE assets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
+
+---------------------------------------------------------------
+-- Tenant Isolation Policies
+---------------------------------------------------------------
+
+CREATE POLICY tenant_isolation_users
+ON users
+FOR ALL
+USING (
+    tenant_id = current_setting('app.current_tenant')::uuid
+);
+
+CREATE POLICY tenant_isolation_risks
+ON risks
+FOR ALL
+USING (
+    tenant_id = current_setting('app.current_tenant')::uuid
+);
+
+CREATE POLICY tenant_isolation_evidence
+ON evidence
+FOR ALL
+USING (
+    tenant_id = current_setting('app.current_tenant')::uuid
+);
+
+CREATE POLICY tenant_isolation_audits
+ON audits
+FOR ALL
+USING (
+    tenant_id = current_setting('app.current_tenant')::uuid
+);
+
+CREATE POLICY tenant_isolation_assets
+ON assets
+FOR ALL
+USING (
+    tenant_id = current_setting('app.current_tenant')::uuid
+);
+
+CREATE POLICY tenant_isolation_vendors
+ON vendors
+FOR ALL
+USING (
+    tenant_id = current_setting('app.current_tenant')::uuid
+);
+
+CREATE POLICY tenant_isolation_tasks
+ON tasks
+FOR ALL
+USING (
+    tenant_id = current_setting('app.current_tenant')::uuid
+);
