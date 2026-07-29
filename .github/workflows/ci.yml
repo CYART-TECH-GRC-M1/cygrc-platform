@@ -38,3 +38,9 @@ jobs:
         run: |
 
           ruff check .
+
+      - name: Show Repository Structure
+        run: |
+          pwd
+          ls -la
+          find . -maxdepth 2
