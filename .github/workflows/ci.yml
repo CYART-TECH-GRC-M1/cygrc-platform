@@ -23,6 +23,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Show Repository Structure
+        run: |
+          pwd
+          ls -la
+          find . -maxdepth 2
+
       - name: Install Dependencies
 
         run: |
@@ -38,9 +44,3 @@ jobs:
         run: |
 
           ruff check .
-
-      - name: Show Repository Structure
-        run: |
-          pwd
-          ls -la
-          find . -maxdepth 2
