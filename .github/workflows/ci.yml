@@ -16,7 +16,25 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Verify Repository
+      - name: Set up Python
+
+        uses: actions/setup-python@v5
+
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+
         run: |
-          echo "CI Pipeline is working!"
-          ls -la
+
+          python -m pip install --upgrade pip
+
+          pip install -r requirements.txt
+
+          pip install ruff
+
+      - name: Run Ruff Linter
+
+        run: |
+
+          ruff check .
