@@ -3,8 +3,9 @@ export interface Control {
   title: string;
   description?: string;
   framework?: string;
-  status: 'Implemented' | 'In Progress' | 'Not Implemented' | 'Not Applicable';
+  status: 'Implemented' | 'In Progress' | 'Not Implemented' | 'Not Applicable' | 'Planned';
   owner?: string | null;
+  evidenceCount?: number;
   createdAt: string;
   updatedAt?: string | null;
 }

@@ -1,46 +1,67 @@
 "use client";
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-type ThemeMode = "dark" | "light";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+} from "react";
+
+type ThemeMode = "dark";
 
 type ThemeContextType = {
   theme: ThemeMode;
   toggleTheme: () => void;
 };
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = createContext<ThemeContextType | undefined>(
+  undefined
+);
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<ThemeMode>("dark");
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem("cygrc-theme") as ThemeMode | null;
-    const systemPrefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
-    const initialTheme = saved || (systemPrefersLight ? "light" : "dark");
-    setTheme(initialTheme);
-  }, []);
+export function ThemeProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const theme: ThemeMode = "dark";
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.toggle("light", theme === "light");
-    root.classList.toggle("dark", theme === "dark");
-    root.style.colorScheme = theme;
-    window.localStorage.setItem("cygrc-theme", theme);
-  }, [theme]);
+
+    // Force CYGRC dark theme
+    root.classList.remove("light");
+    root.classList.add("dark");
+
+    root.style.colorScheme = "dark";
+
+    // Prevent old saved light theme from affecting the app
+    window.localStorage.setItem("cygrc-theme", "dark");
+  }, []);
 
   const value = useMemo(
     () => ({
       theme,
-      toggleTheme: () => setTheme((current) => (current === "dark" ? "light" : "dark")),
+      // Single fixed theme — no light/dark switching
+      toggleTheme: () => {},
     }),
-    [theme]
+    []
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
 export function useTheme() {
   const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
+
+  if (!ctx) {
+    throw new Error(
+      "useTheme must be used within ThemeProvider"
+    );
+  }
+
   return ctx;
 }

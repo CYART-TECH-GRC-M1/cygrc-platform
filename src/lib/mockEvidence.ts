@@ -9,6 +9,10 @@ export interface Evidence {
   uploadedBy?: string | null;
   createdAt: string;
   updatedAt?: string | null;
+  name?: string;
+  type?: string;
+  size?: number;
+  dataUrl?: string;
 }
 
 export const evidences: Evidence[] = [

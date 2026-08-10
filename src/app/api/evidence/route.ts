@@ -7,7 +7,7 @@ export async function GET(req: Request) {
   const page = parseInt(url.searchParams.get('page') || '1', 10);
   const pageSize = parseInt(url.searchParams.get('pageSize') || '20', 10);
 
-  let filtered = evidences.filter((e) => e.name.toLowerCase().includes(q.toLowerCase()));
+  let filtered = evidences.filter((e) => (e.name || e.title || '').toLowerCase().includes(q.toLowerCase()));
   const total = filtered.length;
   const start = (page - 1) * pageSize;
   const end = start + pageSize;
@@ -23,11 +23,18 @@ export async function POST(req: Request) {
     const id = 'e' + Date.now();
     const item: Evidence = {
       id,
+      title: body.title || body.name,
+      description: body.description || '',
+      fileName: body.name,
+      fileUrl: body.dataUrl,
+      linkedControlId: body.linkedControlId || null,
+      status: body.status || 'Pending',
+      uploadedBy: body.uploadedBy || null,
+      createdAt: new Date().toISOString(),
       name: body.name,
       type: body.type || 'application/octet-stream',
       size: body.size || 0,
       dataUrl: body.dataUrl,
-      createdAt: new Date().toISOString(),
     };
     evidences.unshift(item);
     return NextResponse.json({ data: { id: item.id, name: item.name, type: item.type, size: item.size, createdAt: item.createdAt } }, { status: 201 });

@@ -1,14 +1,55 @@
 "use client";
-import React from "react";
 
-export default function Logo({ className }: { className?: string }) {
+import { Fingerprint } from "lucide-react";
+import { motion } from "framer-motion";
+
+interface LogoProps {
+  size?: number;
+  className?: string;
+}
+
+export function Logo({
+  size = 40,
+  className = "",
+}: LogoProps) {
   return (
-    <div className={className} aria-hidden>
-      <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="48" height="48" rx="8" fill="#0b1220" />
-        <path d="M12 34L22 14L30 34" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="36" cy="12" r="4" fill="#94a3b8" />
-      </svg>
+    <motion.div
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 200 }}
+      className={`relative flex items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-emerald-500 shadow-lg ${className}`}
+      style={{
+        width: size,
+        height: size,
+      }}
+    >
+      <Fingerprint
+        className="text-white"
+        size={size * 0.6}
+        strokeWidth={2.5}
+      />
+    </motion.div>
+  );
+}
+
+export function LogoFull({
+  className = "",
+}: {
+  className?: string;
+}) {
+  return (
+    <div className={`flex items-center gap-3 ${className}`}>
+      <Logo size={40} />
+
+      <div className="flex flex-col leading-none">
+        <span className="text-xl font-bold text-white">
+          CyGRC
+        </span>
+
+        <span className="text-[10px] text-slate-400">
+          Governance • Risk • Compliance
+        </span>
+      </div>
     </div>
   );
 }
