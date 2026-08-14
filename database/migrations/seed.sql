@@ -590,7 +590,7 @@ SELECT
     t.tenant_id,
     c.control_id,
     'Weak Password Policy',
-    "Users are creating passwords that do not meet the organization's complexity requirements.",
+    'Users are creating passwords that do not meet the organization''s complexity requirements.',
     4,
     5,
     20,

@@ -876,16 +876,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_tenants_updated ON tenants;
 CREATE TRIGGER trg_tenants_updated
 BEFORE UPDATE ON tenants
 FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
 
-CREATE TRIGGER trg_users_updated
-BEFORE UPDATE ON users
-FOR EACH ROW
-EXECUTE FUNCTION update_timestamp();
-
+DROP TRIGGER IF EXISTS trg_users_updated ON users;
 CREATE TRIGGER trg_users_updated
 BEFORE UPDATE ON users
 FOR EACH ROW
@@ -922,6 +919,7 @@ ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
 -- Tenant Isolation Policies
 ---------------------------------------------------------------
 
+DROP POLICY IF EXISTS tenant_isolation_users ON users;
 CREATE POLICY tenant_isolation_users
 ON users
 FOR ALL
@@ -929,6 +927,7 @@ USING (
     tenant_id = current_setting('app.current_tenant')::uuid
 );
 
+DROP POLICY IF EXISTS tenant_isolation_risks ON risks;
 CREATE POLICY tenant_isolation_risks
 ON risks
 FOR ALL
@@ -936,6 +935,7 @@ USING (
     tenant_id = current_setting('app.current_tenant')::uuid
 );
 
+DROP POLICY IF EXISTS tenant_isolation_evidence ON evidence;
 CREATE POLICY tenant_isolation_evidence
 ON evidence
 FOR ALL
@@ -943,6 +943,7 @@ USING (
     tenant_id = current_setting('app.current_tenant')::uuid
 );
 
+DROP POLICY IF EXISTS tenant_isolation_audits ON audits;
 CREATE POLICY tenant_isolation_audits
 ON audits
 FOR ALL
@@ -950,6 +951,7 @@ USING (
     tenant_id = current_setting('app.current_tenant')::uuid
 );
 
+DROP POLICY IF EXISTS tenant_isolation_assets ON assets;
 CREATE POLICY tenant_isolation_assets
 ON assets
 FOR ALL
@@ -957,6 +959,7 @@ USING (
     tenant_id = current_setting('app.current_tenant')::uuid
 );
 
+DROP POLICY IF EXISTS tenant_isolation_vendors ON vendors;
 CREATE POLICY tenant_isolation_vendors
 ON vendors
 FOR ALL
@@ -964,6 +967,7 @@ USING (
     tenant_id = current_setting('app.current_tenant')::uuid
 );
 
+DROP POLICY IF EXISTS tenant_isolation_tasks ON tasks;
 CREATE POLICY tenant_isolation_tasks
 ON tasks
 FOR ALL
