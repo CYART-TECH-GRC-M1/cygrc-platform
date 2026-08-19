@@ -5,6 +5,8 @@ asyncpg
 psycopg2-binary
 alembic
 pydantic
+email-validator
+pydantic-settings
 python-jose
 passlib[bcrypt]
 python-multipart
