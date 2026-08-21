@@ -17,3 +17,4 @@ openai
 langchain
 langgraph
 pytest
+email-validator
