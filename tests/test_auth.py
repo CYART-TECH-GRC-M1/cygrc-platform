@@ -85,3 +85,50 @@ def test_require_role_rejects_malformed_header():
     with pytest.raises(HTTPException) as exc_info:
         asyncio.run(checker(authorization="NotBearer sometoken"))
     assert exc_info.value.status_code == 401
+
+
+# ---- Login endpoint (integration-style, no live server needed) ----
+
+from fastapi.testclient import TestClient
+from backend.main import app
+
+client = TestClient(app)
+
+
+def test_login_success_returns_token():
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@test.com", "password": "adminpass123"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert "access_token" in body
+    assert body["token_type"] == "bearer"
+
+
+def test_login_wrong_password_returns_401():
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@test.com", "password": "wrongpassword"},
+    )
+    assert response.status_code == 401
+
+
+def test_login_unknown_email_returns_401():
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "nobody@test.com", "password": "whatever"},
+    )
+    assert response.status_code == 401
+
+
+def test_login_returns_role_in_token():
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@test.com", "password": "adminpass123"},
+    )
+    token = response.json()["access_token"]
+
+    from backend.core.security import decode_token
+    payload = decode_token(token)
+    assert payload["role"] == "Admin"
