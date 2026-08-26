@@ -24,3 +24,4 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     tenant = relationship("Tenant", back_populates="users")
+    roles = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
