@@ -1,10 +1,14 @@
 from fastapi import FastAPI
 
+from backend.api.router import api_router
+
 app = FastAPI(
     title="CyGRC Platform API",
     description="Governance, Risk and Compliance Platform",
-    version="1.0.0"
+    version="1.0.0",
 )
+
+app.include_router(api_router)
 
 
 @app.get("/")
