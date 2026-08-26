@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from fastapi import Header, HTTPException, status
 from backend.core.security import decode_token
 
@@ -22,3 +22,34 @@ async def get_current_tenant_id(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Tenant identity could not be verified. Provide 'Authorization' Bearer token or 'X-Tenant-ID' header."
     )
+
+
+def require_role(allowed_roles: List[str]):
+    async def role_checker(
+        authorization: Optional[str] = Header(None)
+    ) -> str:
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid Authorization header."
+            )
+
+        token = authorization.split(" ")[1]
+        payload = decode_token(token)
+
+        if not payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired token."
+            )
+
+        role = payload.get("role")
+        if role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role '{role}' is not permitted to access this resource."
+            )
+
+        return role
+
+    return role_checker
