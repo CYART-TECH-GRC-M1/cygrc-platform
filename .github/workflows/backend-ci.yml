@@ -1,6 +1,7 @@
 name: Backend CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -44,10 +45,3 @@ jobs:
       - name: Run tests
         run: |
           pytest
-
-
-
-
-
-
-          
