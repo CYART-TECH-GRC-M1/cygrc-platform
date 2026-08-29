@@ -31,5 +31,23 @@ services:
     ports:
       - "8080:8080"
 
+  backend:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: cygrc-backend
+    restart: unless-stopped
+    environment:
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+
 volumes:
   postgres_data:
