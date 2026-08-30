@@ -33,3 +33,8 @@ class Control(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     framework = relationship("Framework", back_populates="controls")
+    tenant_mappings = relationship(
+        "TenantControlMapping",
+        back_populates="control",
+        cascade="all, delete-orphan",
+    )

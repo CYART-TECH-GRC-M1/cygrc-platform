@@ -1,7 +1,7 @@
 from uuid import UUID
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, Field
+from typing import List, Optional
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class FrameworkResponse(BaseModel):
@@ -41,3 +41,29 @@ class ControlUpdate(BaseModel):
     control_name: Optional[str] = Field(default=None, max_length=255)
     description: Optional[str] = None
     status: Optional[str] = Field(default=None, max_length=50)
+
+
+class ProvisionSummary(BaseModel):
+    tenant_id: UUID
+    frameworks_seeded: List[str]
+    mappings_created: int
+    mappings_skipped: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TenantMappedControlResponse(BaseModel):
+    mapping_id: UUID
+    tenant_id: UUID
+    control_id: UUID
+    mapping_status: Optional[str] = None
+    seeded_at: Optional[datetime] = None
+    control_code: str
+    control_name: str
+    description: Optional[str] = None
+    control_status: Optional[str] = None
+    framework_id: UUID
+    framework_name: str
+    framework_version: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)

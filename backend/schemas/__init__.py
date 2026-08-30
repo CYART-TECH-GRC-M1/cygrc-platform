@@ -1,6 +1,13 @@
 from backend.schemas.tenant import TenantCreate, TenantUpdate, TenantResponse
 from backend.schemas.user import UserCreate, UserUpdate, UserResponse
-from backend.schemas.control import FrameworkResponse, ControlResponse, ControlCreate, ControlUpdate
+from backend.schemas.control import (
+    FrameworkResponse,
+    ControlResponse,
+    ControlCreate,
+    ControlUpdate,
+    ProvisionSummary,
+    TenantMappedControlResponse,
+)
 
 __all__ = [
     "TenantCreate",
@@ -13,4 +20,6 @@ __all__ = [
     "ControlResponse",
     "ControlCreate",
     "ControlUpdate",
+    "ProvisionSummary",
+    "TenantMappedControlResponse",
 ]

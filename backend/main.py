@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.core.config import settings
 from backend.api.router import api_router
+import backend.models  # noqa: F401 — register ORM models (including TenantControlMapping)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
