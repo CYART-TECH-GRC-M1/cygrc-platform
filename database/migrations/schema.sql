@@ -967,3 +967,70 @@ FOR ALL
 USING (
     tenant_id = current_setting('app.current_tenant')::uuid
 );
+---------------------------------------------------------------
+-- FORCE Row Level Security (applies even to table owner)
+---------------------------------------------------------------
+
+ALTER TABLE users FORCE ROW LEVEL SECURITY;
+ALTER TABLE risks FORCE ROW LEVEL SECURITY;
+ALTER TABLE risk_assessments FORCE ROW LEVEL SECURITY;
+ALTER TABLE risk_treatments FORCE ROW LEVEL SECURITY;
+ALTER TABLE evidence FORCE ROW LEVEL SECURITY;
+ALTER TABLE evidence_files FORCE ROW LEVEL SECURITY;
+ALTER TABLE evidence_reviews FORCE ROW LEVEL SECURITY;
+ALTER TABLE audits FORCE ROW LEVEL SECURITY;
+ALTER TABLE audit_findings FORCE ROW LEVEL SECURITY;
+ALTER TABLE audit_evidence FORCE ROW LEVEL SECURITY;
+ALTER TABLE policies FORCE ROW LEVEL SECURITY;
+ALTER TABLE policy_acknowledgements FORCE ROW LEVEL SECURITY;
+ALTER TABLE assets FORCE ROW LEVEL SECURITY;
+ALTER TABLE vendors FORCE ROW LEVEL SECURITY;
+ALTER TABLE tasks FORCE ROW LEVEL SECURITY;
+ALTER TABLE comments FORCE ROW LEVEL SECURITY;
+ALTER TABLE attachments FORCE ROW LEVEL SECURITY;
+ALTER TABLE notifications FORCE ROW LEVEL SECURITY;
+ALTER TABLE activity_logs FORCE ROW LEVEL SECURITY;
+ALTER TABLE api_keys FORCE ROW LEVEL SECURITY;
+
+---------------------------------------------------------------
+-- Missing Tenant Isolation Policies (indirect via parent table)
+---------------------------------------------------------------
+
+CREATE POLICY tenant_isolation_risk_assessments ON risk_assessments FOR ALL
+USING (risk_id IN (SELECT risk_id FROM risks WHERE tenant_id = current_setting('app.current_tenant')::uuid));
+
+CREATE POLICY tenant_isolation_risk_treatments ON risk_treatments FOR ALL
+USING (risk_id IN (SELECT risk_id FROM risks WHERE tenant_id = current_setting('app.current_tenant')::uuid));
+
+CREATE POLICY tenant_isolation_evidence_files ON evidence_files FOR ALL
+USING (evidence_id IN (SELECT evidence_id FROM evidence WHERE tenant_id = current_setting('app.current_tenant')::uuid));
+
+CREATE POLICY tenant_isolation_evidence_reviews ON evidence_reviews FOR ALL
+USING (evidence_id IN (SELECT evidence_id FROM evidence WHERE tenant_id = current_setting('app.current_tenant')::uuid));
+
+CREATE POLICY tenant_isolation_audit_findings ON audit_findings FOR ALL
+USING (audit_id IN (SELECT audit_id FROM audits WHERE tenant_id = current_setting('app.current_tenant')::uuid));
+
+CREATE POLICY tenant_isolation_audit_evidence ON audit_evidence FOR ALL
+USING (finding_id IN (SELECT finding_id FROM audit_findings af JOIN audits a ON af.audit_id = a.audit_id WHERE a.tenant_id = current_setting('app.current_tenant')::uuid));
+
+CREATE POLICY tenant_isolation_policies ON policies FOR ALL
+USING (tenant_id = current_setting('app.current_tenant')::uuid);
+
+CREATE POLICY tenant_isolation_policy_ack ON policy_acknowledgements FOR ALL
+USING (policy_id IN (SELECT policy_id FROM policies WHERE tenant_id = current_setting('app.current_tenant')::uuid));
+
+CREATE POLICY tenant_isolation_comments ON comments FOR ALL
+USING (task_id IN (SELECT task_id FROM tasks WHERE tenant_id = current_setting('app.current_tenant')::uuid));
+
+CREATE POLICY tenant_isolation_attachments ON attachments FOR ALL
+USING (task_id IN (SELECT task_id FROM tasks WHERE tenant_id = current_setting('app.current_tenant')::uuid));
+
+CREATE POLICY tenant_isolation_notifications ON notifications FOR ALL
+USING (user_id IN (SELECT user_id FROM users WHERE tenant_id = current_setting('app.current_tenant')::uuid));
+
+CREATE POLICY tenant_isolation_activity_logs ON activity_logs FOR ALL
+USING (tenant_id = current_setting('app.current_tenant')::uuid);
+
+CREATE POLICY tenant_isolation_api_keys ON api_keys FOR ALL
+USING (tenant_id = current_setting('app.current_tenant')::uuid);
