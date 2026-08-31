@@ -886,10 +886,7 @@ BEFORE UPDATE ON users
 FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
 
-CREATE TRIGGER trg_users_updated
-BEFORE UPDATE ON users
-FOR EACH ROW
-EXECUTE FUNCTION update_timestamp();
+
 
 /*==============================================================
 =            ROW LEVEL SECURITY (RLS)
