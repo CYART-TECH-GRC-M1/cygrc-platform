@@ -49,7 +49,7 @@ async def test_seeder_is_idempotent():
         )
         codes = {c.control_code for c in iso.scalars().all()}
 
-    await engine.dispose()
+
     assert first == second
     assert first >= 2
     assert "A.5.1" in codes
@@ -76,7 +76,7 @@ async def test_provision_tenant_creates_access_control_and_security_policy_mappi
         blob = " ".join(control.control_name for _, control in rows).lower()
         mapping_count = len(rows)
 
-    await engine.dispose()
+
     assert summary["mappings_created"] >= 1
     assert "iso 27001" in [n.lower() for n in summary["frameworks_seeded"]] or summary[
         "frameworks_seeded"
@@ -117,7 +117,7 @@ async def test_provision_tenant_second_run_does_not_duplicate_mappings():
             )
         ).scalar_one()
 
-    await engine.dispose()
+
     assert count_after_first == count_after_second
     assert second["mappings_created"] == 0
     assert second["mappings_skipped"] == first["mappings_created"] or second[
@@ -149,7 +149,7 @@ async def test_create_tenant_returns_201_and_provision_creates_mappings():
         rows = await _mapped_controls(db, tenant_id)
         blob = " ".join(control.control_name for _, control in rows).lower()
 
-    await engine.dispose()
+
     assert summary["tenant_id"] == tenant_id
     assert len(rows) >= 1
     assert "access control" in blob

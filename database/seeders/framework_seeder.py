@@ -5,7 +5,8 @@ from typing import List, Optional, Sequence, Tuple
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.control import Control, Framework
+from backend.models.control import Control, ControlFamily, Framework
+from backend.models.tenant import TenantStatus
 
 # Shared platform catalog (not tenant-scoped). Match on framework_name + version.
 DEFAULT_FRAMEWORKS: Tuple[Tuple[str, str, str], ...] = (
@@ -131,6 +132,9 @@ async def seed_catalog_frameworks(db: AsyncSession) -> None:
 
     await db.flush()
 
+    # Cache control families per framework_id
+    family_cache: dict = {}
+
     for fw_name, fw_version, code, ctrl_name, description in BASELINE_CONTROLS:
         framework = await _get_framework(db, fw_name, fw_version)
         if framework is None:
@@ -140,6 +144,23 @@ async def seed_catalog_frameworks(db: AsyncSession) -> None:
             framework = by_name.scalars().first()
         if framework is None:
             continue
+
+        if framework.framework_id not in family_cache:
+            cf_res = await db.execute(
+                select(ControlFamily).where(
+                    ControlFamily.framework_id == framework.framework_id
+                )
+            )
+            cf = cf_res.scalars().first()
+            if not cf:
+                cf = ControlFamily(
+                    framework_id=framework.framework_id,
+                    family_name=f"{fw_name} Baseline Controls",
+                    description=f"Baseline control family for {fw_name}",
+                )
+                db.add(cf)
+                await db.flush()
+            family_cache[framework.framework_id] = cf.control_family_id
 
         existing_ctrl = await db.execute(
             select(Control).where(
@@ -153,10 +174,11 @@ async def seed_catalog_frameworks(db: AsyncSession) -> None:
         db.add(
             Control(
                 framework_id=framework.framework_id,
+                control_family_id=family_cache[framework.framework_id],
                 control_code=code,
                 control_name=ctrl_name,
                 description=description,
-                status="ACTIVE",
+                status=TenantStatus.ACTIVE,
             )
         )
 

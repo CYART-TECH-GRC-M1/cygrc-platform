@@ -1,5 +1,6 @@
 """Tenant auto-provisioning: seed catalog frameworks and baseline control mappings."""
 
+import asyncio
 import logging
 from typing import Any, Dict, Optional
 from uuid import UUID
@@ -69,7 +70,7 @@ async def _provision_with_session(tenant_id: UUID, db: AsyncSession) -> Dict[str
         created += 1
 
     try:
-        await db.commit()
+        await db.flush()
     except IntegrityError:
         await db.rollback()
         logger.info(
@@ -99,13 +100,20 @@ async def provision_tenant(
     """
     if db is None:
         async with AsyncSessionLocal() as session:
-            return await _provision_with_session(tenant_id, session)
-    return await _provision_with_session(tenant_id, db)
+            res = await _provision_with_session(tenant_id, session)
+            await session.commit()
+            return res
+    res = await _provision_with_session(tenant_id, db)
+    await db.flush()
+    return res
 
 
 async def run_tenant_provisioning(tenant_id: UUID) -> None:
     """Background-task entrypoint. Uses its own session; never fails the HTTP 201."""
     try:
-        await provision_tenant(tenant_id)
+        await asyncio.sleep(0.05)
+        async with AsyncSessionLocal() as session:
+            await provision_tenant(tenant_id, session)
+            await session.commit()
     except Exception:
         logger.exception("Background provisioning failed for tenant %s", tenant_id)

@@ -1,12 +1,14 @@
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.pool import NullPool
 from backend.core.config import settings
 
 engine = create_async_engine(
     settings.async_database_url,
     echo=False,
-    future=True
+    future=True,
+    poolclass=NullPool,
 )
 
 AsyncSessionLocal = async_sessionmaker(
