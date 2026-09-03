@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     KEYCLOAK_CLIENT_ID: str = "cygrc-backend"
     KEYCLOAK_CLIENT_SECRET: str = ""
     KEYCLOAK_ENABLED: bool = True
+    LOCAL_AUTH_ENABLED: bool = False
+    KEYCLOAK_AUDIENCE: Optional[str] = None
 
     @property
     def async_database_url(self) -> str:

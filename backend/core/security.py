@@ -111,9 +111,9 @@ def _extract_keycloak_roles(payload: Dict[str, Any]) -> List[str]:
 
     resource_access = payload.get("resource_access", {})
     if isinstance(resource_access, dict):
-        for _, access in resource_access.items():
-            if isinstance(access, dict):
-                roles.extend(access.get("roles", []))
+        client_access = resource_access.get(settings.KEYCLOAK_CLIENT_ID, {})
+        if isinstance(client_access, dict):
+            roles.extend(client_access.get("roles", []))
 
     return roles
 
@@ -172,10 +172,10 @@ def decode_keycloak_token(token: str) -> Optional[Dict[str, Any]]:
             token,
             public_key,
             algorithms=["RS256", "RS384", "RS512", "ES256", "ES384", "ES512"],
-            audience=None,
+            audience=settings.KEYCLOAK_AUDIENCE or settings.KEYCLOAK_CLIENT_ID,
             issuer=settings.keycloak_realm_url,
             options={
-                "verify_aud": False,
+                "verify_aud": True,
                 "verify_exp": True,
                 "verify_iat": True,
                 "verify_iss": True,

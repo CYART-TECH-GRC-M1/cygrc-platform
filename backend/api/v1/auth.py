@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Any, Dict, Optional
 
 from backend.auth.schemas import LoginRequest, TokenResponse, UserInfo
+from backend.core.config import settings
 from backend.core.dependencies import get_current_user, require_role
 from backend.core.security import (
     create_access_token,
@@ -83,9 +84,10 @@ async def login(payload: LoginRequest) -> TokenResponse:
     if kc_result is not None:
         return kc_result
 
-    local_result = _try_local_login(payload)
-    if local_result is not None:
-        return local_result
+    if settings.LOCAL_AUTH_ENABLED or not settings.KEYCLOAK_ENABLED:
+        local_result = _try_local_login(payload)
+        if local_result is not None:
+            return local_result
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

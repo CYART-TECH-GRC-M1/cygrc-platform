@@ -21,6 +21,7 @@ import {
   ScanLine,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../../../context/AuthContext";
 
 interface FormData {
   email: string;
@@ -127,6 +128,7 @@ const getPasswordStrength = (
 };
 
 export default function LoginPage() {
+  const { login } = useAuth();
   const [showPassword, setShowPassword] =
     useState(false);
 
@@ -284,26 +286,11 @@ export default function LoginPage() {
     }
 
     try {
-      /*
-       * Replace this demo section with
-       * your real backend login API.
-       */
-
-      await new Promise((resolve) =>
-        setTimeout(resolve, 900)
-      );
+      await login(formData.email.trim(), formData.password);
 
       setIsSuccess(true);
 
-      localStorage.setItem(
-        "auth_token",
-        "demo-auth-token"
-      );
-
-      setTimeout(() => {
-        window.location.href =
-          "/dashboard";
-      }, 700);
+      window.location.href = "/dashboard";
     } catch (error) {
       console.error(
         "Login error:",
@@ -312,7 +299,9 @@ export default function LoginPage() {
 
       setErrors({
         form:
-          "Unable to sign in. Please check your connection and try again.",
+          error instanceof Error
+            ? error.message
+            : "Unable to sign in. Please check your connection and try again.",
       });
 
       setIsLoading(false);

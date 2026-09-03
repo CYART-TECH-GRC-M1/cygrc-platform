@@ -2,6 +2,7 @@
 import { Providers } from "@/components/Providers";
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
+import RequireAuth from "@/components/ui/RequireAuth";
 
 export default function DashboardLayout({
   children,
@@ -10,8 +11,9 @@ export default function DashboardLayout({
 }) {
   return (
     <Providers>
-      <div className="flex min-h-screen bg-slate-950 text-slate-100">
-        <Sidebar />
+      <RequireAuth>
+        <div className="flex min-h-screen bg-slate-950 text-slate-100">
+          <Sidebar />
 
         <div className="flex min-w-0 flex-1 flex-col bg-slate-950">
           <TopNav />
@@ -24,7 +26,8 @@ export default function DashboardLayout({
             © {new Date().getFullYear()} CyGRC Platform. All rights reserved. v1.0.0
           </footer>
         </div>
-      </div>
+        </div>
+      </RequireAuth>
     </Providers>
   );
 }
