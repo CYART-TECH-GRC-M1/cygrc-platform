@@ -90,6 +90,7 @@ async def login(payload: LoginRequest) -> TokenResponse:
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail=_UNAUTH_MSG,
+        headers={"WWW-Authenticate": "Bearer"},
     )
 
 

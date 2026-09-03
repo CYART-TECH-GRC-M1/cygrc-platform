@@ -194,14 +194,32 @@ def decode_keycloak_token(token: str) -> Optional[Dict[str, Any]]:
 
 
 def validate_token(token: str) -> Optional[Dict[str, Any]]:
-    keycloak_payload = decode_keycloak_token(token)
-    if keycloak_payload:
-        return keycloak_payload
+    # Route tokens to the matching verifier so local tokens do not perform a
+    # blocking JWKS request before their signature is checked.
+    try:
+        algorithm = jwt.get_unverified_header(token).get("alg", "")
+    except JWTError:
+        algorithm = ""
 
+    if algorithm.startswith("HS"):
+        local_payload = decode_token(token)
+        if local_payload:
+            return _normalize_claims(local_payload)
+
+    if settings.KEYCLOAK_ENABLED and algorithm.startswith(("RS", "ES")):
+        keycloak_payload = decode_keycloak_token(token)
+        if keycloak_payload:
+            return keycloak_payload
+
+    # Keep a fallback for legacy tokens with an unusual or unreadable header.
     local_payload = decode_token(token)
     if local_payload:
-        normalized = _normalize_claims(local_payload)
-        return normalized
+        return _normalize_claims(local_payload)
+
+    if settings.KEYCLOAK_ENABLED:
+        keycloak_payload = decode_keycloak_token(token)
+        if keycloak_payload:
+            return keycloak_payload
 
     return None
 
