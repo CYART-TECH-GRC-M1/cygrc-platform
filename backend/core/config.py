@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     KEYCLOAK_ENABLED: bool = True
     LOCAL_AUTH_ENABLED: bool = False
     KEYCLOAK_AUDIENCE: Optional[str] = None
+    CORS_ORIGINS: str = "http://localhost:3000"
 
     @property
     def async_database_url(self) -> str:

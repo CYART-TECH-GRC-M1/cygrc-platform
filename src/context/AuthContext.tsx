@@ -3,8 +3,6 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 type User = { id: string; email: string; name: string; role: string } | null;
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-
 type AuthContextType = {
   user: User;
   token: string | null;
@@ -38,11 +36,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function login(email: string, password: string) {
     setLoading(true);
-    const res = await fetch(`${API_BASE_URL}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+    const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
     const json = await res.json();
     if (!res.ok || !json.access_token) { setLoading(false); throw new Error(json?.detail || 'Login failed'); }
 
-    const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
+    const meRes = await fetch('/api/auth/me', {
       headers: { Authorization: `Bearer ${json.access_token}` },
     });
     const me = await meRes.json();

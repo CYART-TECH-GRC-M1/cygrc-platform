@@ -201,7 +201,9 @@ def validate_token(token: str) -> Optional[Dict[str, Any]]:
     except JWTError:
         algorithm = ""
 
-    if algorithm.startswith("HS"):
+    local_auth_enabled = settings.LOCAL_AUTH_ENABLED or not settings.KEYCLOAK_ENABLED
+
+    if local_auth_enabled and algorithm.startswith("HS"):
         local_payload = decode_token(token)
         if local_payload:
             return _normalize_claims(local_payload)
@@ -212,9 +214,10 @@ def validate_token(token: str) -> Optional[Dict[str, Any]]:
             return keycloak_payload
 
     # Keep a fallback for legacy tokens with an unusual or unreadable header.
-    local_payload = decode_token(token)
-    if local_payload:
-        return _normalize_claims(local_payload)
+    if local_auth_enabled:
+        local_payload = decode_token(token)
+        if local_payload:
+            return _normalize_claims(local_payload)
 
     if settings.KEYCLOAK_ENABLED:
         keycloak_payload = decode_keycloak_token(token)
