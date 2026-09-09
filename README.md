@@ -27,9 +27,12 @@ The CI pipeline currently includes:
 - Repository checkout
 - Python 3.12 setup
 - Repository structure check
+- Backend dependency installation when `requirements.txt` is available
 - Ruff linting for Python code
+- Pytest installation when test files are available
+- Automatic test execution when test files are available
 
-If Python files are present, Ruff checks the repository for linting issues.
+If no backend or test files are present, the corresponding CI steps are skipped.
 
 ## Secret Scanning
 
