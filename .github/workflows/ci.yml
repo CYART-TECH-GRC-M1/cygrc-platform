@@ -17,9 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-
         uses: actions/setup-python@v5
-
         with:
           python-version: "3.12"
 
@@ -27,17 +25,42 @@ jobs:
         run: |
           pwd
           ls -la
-          find . -maxdepth 2
+          find . -maxdepth 2 -type f
+
+      - name: Install Backend Dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+          else
+            echo "No requirements.txt found. Backend dependencies will be installed when backend code is added."
+          fi
 
       - name: Install Ruff
         run: |
           python -m pip install --upgrade pip
           pip install ruff
 
-      - name: Run Ruff (if Python code exists)
+      - name: Run Ruff
         run: |
-          if find . -name "*.py" | grep -q .; then
-          ruff check .
+          if find . -name "*.py" -not -path "./.git/*" | grep -q .; then
+            ruff check .
           else
-          echo "No Python files found. Skipping lint."
+            echo "No Python files found. Skipping lint."
+          fi
+
+      - name: Install Pytest
+        run: |
+          if find . -type f \( -name "test_*.py" -o -name "*_test.py" \) -not -path "./.git/*" | grep -q .; then
+            pip install pytest
+          else
+            echo "No test files found. Skipping pytest installation."
+          fi
+
+      - name: Run Tests
+        run: |
+          if find . -type f \( -name "test_*.py" -o -name "*_test.py" \) -not -path "./.git/*" | grep -q .; then
+            pytest
+          else
+            echo "No test files found. Skipping tests."
           fi
