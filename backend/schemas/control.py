@@ -24,6 +24,7 @@ class FrameworkResponse(BaseModel):
 class ControlResponse(BaseModel):
     control_id: UUID
     framework_id: UUID
+    control_family_id: Optional[UUID] = None
     control_code: str
     control_name: str
     description: Optional[str] = None
@@ -36,10 +37,12 @@ class ControlResponse(BaseModel):
 
 class ControlCreate(BaseModel):
     framework_id: UUID
+    control_family_id: Optional[UUID] = None
     control_code: str = Field(..., min_length=1, max_length=50)
     control_name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     status: Optional[str] = Field(default="ACTIVE", max_length=50)
+
 
 
 class ControlUpdate(BaseModel):
