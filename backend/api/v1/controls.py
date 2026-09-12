@@ -5,7 +5,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import get_db
-from backend.models.control import Control, Framework
+from backend.core.dependencies import require_role
+from backend.models.control import Control, ControlFamily, Framework
+from backend.models.tenant import TenantStatus
 from backend.schemas.control import ControlCreate, ControlResponse, ControlUpdate
 
 router = APIRouter(tags=["Controls"])
@@ -29,13 +31,18 @@ async def list_controls(
     return controls
 
 
-@router.post("/", response_model=ControlResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=ControlResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role(["Admin", "Tenant Admin", "Compliance Manager"]))]
+)
 async def create_control(
     payload: ControlCreate,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Create a new compliance control under a framework.
+    Create a new compliance control under a framework. Restricted to Admin/Compliance roles.
     """
     framework_res = await db.execute(select(Framework).where(Framework.framework_id == payload.framework_id))
     framework = framework_res.scalar_one_or_none()
@@ -45,12 +52,30 @@ async def create_control(
             detail="Specified Framework not found"
         )
 
+    # Ensure a control family exists for this framework if not explicitly provided
+    family_id = payload.control_family_id
+    if not family_id:
+        family_res = await db.execute(
+            select(ControlFamily).where(ControlFamily.framework_id == payload.framework_id)
+        )
+        family = family_res.scalars().first()
+        if not family:
+            family = ControlFamily(
+                framework_id=payload.framework_id,
+                family_name=f"{framework.framework_name} Controls",
+                description=f"Control family for {framework.framework_name}",
+            )
+            db.add(family)
+            await db.flush()
+        family_id = family.control_family_id
+
     new_control = Control(
         framework_id=payload.framework_id,
+        control_family_id=family_id,
         control_code=payload.control_code,
         control_name=payload.control_name,
         description=payload.description,
-        status=payload.status or "ACTIVE"
+        status=payload.status or TenantStatus.ACTIVE
     )
     db.add(new_control)
     await db.commit()
@@ -73,14 +98,19 @@ async def get_control(control_id: UUID, db: AsyncSession = Depends(get_db)):
     return control
 
 
-@router.put("/{control_id}", response_model=ControlResponse, status_code=status.HTTP_200_OK)
+@router.put(
+    "/{control_id}",
+    response_model=ControlResponse,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_role(["Admin", "Tenant Admin", "Compliance Manager"]))]
+)
 async def update_control(
     control_id: UUID,
     payload: ControlUpdate,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Update control details.
+    Update control details. Restricted to Admin/Compliance roles.
     """
     result = await db.execute(select(Control).where(Control.control_id == control_id))
     control = result.scalar_one_or_none()
