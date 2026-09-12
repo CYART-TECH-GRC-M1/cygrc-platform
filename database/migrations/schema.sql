@@ -973,6 +973,7 @@ ON tasks
 FOR ALL
 USING (
     tenant_id = current_setting('app.current_tenant')::uuid
+<<<<<<< HEAD
 );
 ---------------------------------------------------------------
 -- FORCE Row Level Security (applies even to table owner)
@@ -1041,3 +1042,6 @@ USING (tenant_id = current_setting('app.current_tenant')::uuid);
 
 CREATE POLICY tenant_isolation_api_keys ON api_keys FOR ALL
 USING (tenant_id = current_setting('app.current_tenant')::uuid);
+=======
+);
+>>>>>>> origin/Abhishek

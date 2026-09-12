@@ -1,7 +1,18 @@
 from uuid import UUID
 from datetime import datetime
+<<<<<<< HEAD
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
+=======
+from typing import Optional
+from pydantic import BaseModel, Field
+
+
+class FrameworkCreate(BaseModel):
+    framework_name: str = Field(..., min_length=1, max_length=255)
+    version: Optional[str] = Field(default=None, max_length=100)
+    description: Optional[str] = None
+>>>>>>> origin/Abhishek
 
 
 class FrameworkResponse(BaseModel):
@@ -41,6 +52,7 @@ class ControlUpdate(BaseModel):
     control_name: Optional[str] = Field(default=None, max_length=255)
     description: Optional[str] = None
     status: Optional[str] = Field(default=None, max_length=50)
+<<<<<<< HEAD
 
 
 class ProvisionSummary(BaseModel):
@@ -67,3 +79,5 @@ class TenantMappedControlResponse(BaseModel):
     framework_version: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+=======
+>>>>>>> origin/Abhishek

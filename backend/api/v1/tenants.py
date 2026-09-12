@@ -1,5 +1,6 @@
 from typing import List
 from uuid import UUID
+<<<<<<< HEAD
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,10 +12,20 @@ from backend.models.tenant_control import TenantControlMapping
 from backend.schemas.control import ProvisionSummary, TenantMappedControlResponse
 from backend.schemas.tenant import TenantCreate, TenantUpdate, TenantResponse
 from backend.services.provisioning import provision_tenant, run_tenant_provisioning
+=======
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from backend.core.database import get_db
+from backend.core.dependencies import get_current_tenant_id
+from backend.models.tenant import Tenant
+from backend.schemas.tenant import TenantCreate, TenantUpdate, TenantResponse
+>>>>>>> origin/Abhishek
 
 router = APIRouter()
 
 
+<<<<<<< HEAD
 @router.post(
     "/",
     response_model=TenantResponse,
@@ -35,6 +46,18 @@ async def create_tenant(
     if tenant_in.domain:
         result = await db.execute(select(Tenant).where(Tenant.domain == tenant_in.domain))
         if result.scalars().first():
+=======
+@router.post("/", response_model=TenantResponse, status_code=status.HTTP_201_CREATED)
+async def create_tenant(
+    tenant_in: TenantCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Register/Onboard a new company (tenant)."""
+    if tenant_in.domain:
+        result = await db.execute(select(Tenant).where(Tenant.domain == tenant_in.domain))
+        existing_tenant = result.scalars().first()
+        if existing_tenant:
+>>>>>>> origin/Abhishek
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Tenant with domain '{tenant_in.domain}' already exists."
@@ -48,7 +71,10 @@ async def create_tenant(
     db.add(new_tenant)
     await db.commit()
     await db.refresh(new_tenant)
+<<<<<<< HEAD
     background_tasks.add_task(run_tenant_provisioning, new_tenant.tenant_id)
+=======
+>>>>>>> origin/Abhishek
     return new_tenant
 
 
@@ -57,7 +83,11 @@ async def get_current_tenant(
     current_tenant_id: str = Depends(get_current_tenant_id),
     db: AsyncSession = Depends(get_db)
 ):
+<<<<<<< HEAD
     """Fetch the authenticated caller's own tenant details."""
+=======
+    """Fetch current tenant details using tenant security dependency."""
+>>>>>>> origin/Abhishek
     try:
         tenant_uuid = UUID(current_tenant_id)
     except ValueError:
@@ -76,17 +106,26 @@ async def get_current_tenant(
     return tenant
 
 
+<<<<<<< HEAD
 @router.get("/", response_model=List[TenantResponse], dependencies=[Depends(require_role(["Super Admin"]))])
+=======
+@router.get("/", response_model=List[TenantResponse])
+>>>>>>> origin/Abhishek
 async def list_tenants(
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_db)
 ):
+<<<<<<< HEAD
     """List all registered tenants. Super Admin only — cross-tenant visibility."""
+=======
+    """List all registered tenants."""
+>>>>>>> origin/Abhishek
     result = await db.execute(select(Tenant).offset(skip).limit(limit))
     return result.scalars().all()
 
 
+<<<<<<< HEAD
 @router.post(
     "/{tenant_id}/provision",
     response_model=ProvisionSummary,
@@ -157,11 +196,18 @@ async def list_tenant_controls(
 
 
 @router.get("/{tenant_id}", response_model=TenantResponse, dependencies=[Depends(require_role(["Super Admin"]))])
+=======
+@router.get("/{tenant_id}", response_model=TenantResponse)
+>>>>>>> origin/Abhishek
 async def get_tenant_by_id(
     tenant_id: UUID,
     db: AsyncSession = Depends(get_db)
 ):
+<<<<<<< HEAD
     """Get any tenant's profile by ID. Super Admin only — cross-tenant visibility."""
+=======
+    """Get tenant profile by tenant_id."""
+>>>>>>> origin/Abhishek
     result = await db.execute(select(Tenant).where(Tenant.tenant_id == tenant_id))
     tenant = result.scalars().first()
     if not tenant:
@@ -176,6 +222,7 @@ async def get_tenant_by_id(
 async def update_tenant(
     tenant_id: UUID,
     tenant_in: TenantUpdate,
+<<<<<<< HEAD
     current_tenant_id: str = Depends(get_current_tenant_id),
     db: AsyncSession = Depends(get_db)
 ):
@@ -194,6 +241,11 @@ async def update_tenant(
             detail="You may only update your own tenant."
         )
 
+=======
+    db: AsyncSession = Depends(get_db)
+):
+    """Update tenant information."""
+>>>>>>> origin/Abhishek
     result = await db.execute(select(Tenant).where(Tenant.tenant_id == tenant_id))
     tenant = result.scalars().first()
     if not tenant:

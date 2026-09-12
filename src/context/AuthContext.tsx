@@ -24,7 +24,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const u = localStorage.getItem('cygrc_user');
     if (t && u) {
       setToken(t);
+<<<<<<< HEAD
       try { setUser(JSON.parse(u)); } catch { setUser(null); }
+=======
+      try {
+        setUser(JSON.parse(u));
+      } catch {
+        localStorage.removeItem('cygrc_token');
+        localStorage.removeItem('cygrc_user');
+      }
+>>>>>>> origin/Abhishek
     }
     setLoading(false);
   }, []);
@@ -33,11 +42,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
     const json = await res.json();
+<<<<<<< HEAD
     if (!res.ok) { setLoading(false); throw new Error(json?.error || 'Login failed'); }
     setToken(json.token);
     setUser(json.user);
     localStorage.setItem('cygrc_token', json.token);
     localStorage.setItem('cygrc_user', JSON.stringify(json.user));
+=======
+    if (!res.ok || !json.access_token) { setLoading(false); throw new Error(json?.detail || 'Login failed'); }
+
+    const meRes = await fetch('/api/auth/me', {
+      headers: { Authorization: `Bearer ${json.access_token}` },
+    });
+    const me = await meRes.json();
+    if (!meRes.ok) { setLoading(false); throw new Error(me?.detail || 'Unable to load user profile'); }
+
+    const authenticatedUser = {
+      id: me.user_id,
+      email: me.email,
+      name: [me.first_name, me.last_name].filter(Boolean).join(' ') || me.email,
+      role: me.role,
+    };
+    setToken(json.access_token);
+    setUser(authenticatedUser);
+    localStorage.setItem('cygrc_token', json.access_token);
+    localStorage.setItem('cygrc_user', JSON.stringify(authenticatedUser));
+>>>>>>> origin/Abhishek
     setLoading(false);
   }
 
@@ -53,8 +83,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   function hasRole(role: string) {
     if (!user) return false;
+<<<<<<< HEAD
     if (user.role === 'admin') return true;
     return user.role === role;
+=======
+    return user.role.toLowerCase() === role.toLowerCase();
+>>>>>>> origin/Abhishek
   }
 
   return <AuthContext.Provider value={{ user, token, loading, login, logout, hasRole }}>{children}</AuthContext.Provider>;

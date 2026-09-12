@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+<<<<<<< HEAD
 import { users } from '../../../../lib/mockUsers';
 
 function makeToken(userId: string) {
@@ -17,6 +18,21 @@ export async function POST(req: Request) {
     const token = makeToken(user.id);
     return NextResponse.json({ token, user });
   } catch (err) {
+=======
+
+const API_BASE_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+
+export async function POST(req: Request) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(await req.json()),
+    });
+    const body = await response.json();
+    return NextResponse.json(body, { status: response.status });
+  } catch {
+>>>>>>> origin/Abhishek
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
 }

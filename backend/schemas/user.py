@@ -14,8 +14,12 @@ class UserBase(BaseModel):
 
 
 class UserCreate(BaseModel):
+<<<<<<< HEAD
     # tenant_id is intentionally NOT accepted here — it's always derived
     # from the authenticated caller's tenant to enforce zero-trust isolation.
+=======
+    tenant_id: Optional[UUID] = None
+>>>>>>> origin/Abhishek
     first_name: str
     last_name: Optional[str] = None
     email: EmailStr

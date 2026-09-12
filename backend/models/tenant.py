@@ -28,8 +28,11 @@ class Tenant(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
+<<<<<<< HEAD
     control_mappings = relationship(
         "TenantControlMapping",
         back_populates="tenant",
         cascade="all, delete-orphan",
     )
+=======
+>>>>>>> origin/Abhishek

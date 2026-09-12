@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 from typing import List
+=======
+from typing import List, Optional
+>>>>>>> origin/Abhishek
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,11 +10,16 @@ from sqlalchemy.future import select
 from backend.core.database import get_db
 from backend.core.dependencies import get_current_tenant_id
 from backend.models.user import User
+<<<<<<< HEAD
+=======
+from backend.models.tenant import Tenant
+>>>>>>> origin/Abhishek
 from backend.schemas.user import UserCreate, UserUpdate, UserResponse
 
 router = APIRouter()
 
 
+<<<<<<< HEAD
 def _parse_tenant_uuid(current_tenant_id: str) -> UUID:
     try:
         return UUID(current_tenant_id)
@@ -31,6 +40,36 @@ async def create_user(
     # tenant_id is NEVER trusted from the request body — always derived
     # from the authenticated tenant to enforce zero-trust isolation.
     target_tenant_id = _parse_tenant_uuid(current_tenant_id)
+=======
+@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    user_in: UserCreate,
+    current_tenant_id: Optional[str] = Depends(get_current_tenant_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new user under a tenant."""
+    # Determine target tenant_id from request body or security header
+    target_tenant_id = user_in.tenant_id
+    if not target_tenant_id and current_tenant_id:
+        try:
+            target_tenant_id = UUID(current_tenant_id)
+        except ValueError:
+            pass
+
+    if not target_tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="tenant_id must be provided in request body or X-Tenant-ID header."
+        )
+
+    # Verify tenant exists
+    tenant_res = await db.execute(select(Tenant).where(Tenant.tenant_id == target_tenant_id))
+    if not tenant_res.scalars().first():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tenant with ID '{target_tenant_id}' does not exist."
+        )
+>>>>>>> origin/Abhishek
 
     # Verify email uniqueness
     user_res = await db.execute(select(User).where(User.email == user_in.email))
@@ -60,8 +99,19 @@ async def list_users(
     current_tenant_id: str = Depends(get_current_tenant_id),
     db: AsyncSession = Depends(get_db)
 ):
+<<<<<<< HEAD
     """List all users belonging to the current tenant only."""
     tenant_uuid = _parse_tenant_uuid(current_tenant_id)
+=======
+    """List all users belonging to the current tenant."""
+    try:
+        tenant_uuid = UUID(current_tenant_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid tenant ID format."
+        )
+>>>>>>> origin/Abhishek
 
     result = await db.execute(
         select(User)
@@ -75,6 +125,7 @@ async def list_users(
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user_by_id(
     user_id: UUID,
+<<<<<<< HEAD
     current_tenant_id: str = Depends(get_current_tenant_id),
     db: AsyncSession = Depends(get_db)
 ):
@@ -84,6 +135,12 @@ async def get_user_by_id(
     result = await db.execute(
         select(User).where(User.user_id == user_id, User.tenant_id == tenant_uuid)
     )
+=======
+    db: AsyncSession = Depends(get_db)
+):
+    """Get user details by user_id."""
+    result = await db.execute(select(User).where(User.user_id == user_id))
+>>>>>>> origin/Abhishek
     user = result.scalars().first()
     if not user:
         raise HTTPException(
@@ -97,6 +154,7 @@ async def get_user_by_id(
 async def update_user(
     user_id: UUID,
     user_in: UserUpdate,
+<<<<<<< HEAD
     current_tenant_id: str = Depends(get_current_tenant_id),
     db: AsyncSession = Depends(get_db)
 ):
@@ -106,6 +164,12 @@ async def update_user(
     result = await db.execute(
         select(User).where(User.user_id == user_id, User.tenant_id == tenant_uuid)
     )
+=======
+    db: AsyncSession = Depends(get_db)
+):
+    """Update user information."""
+    result = await db.execute(select(User).where(User.user_id == user_id))
+>>>>>>> origin/Abhishek
     user = result.scalars().first()
     if not user:
         raise HTTPException(

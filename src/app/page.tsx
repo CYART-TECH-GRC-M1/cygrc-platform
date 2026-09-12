@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 "use client";
 
 import Link from "next/link";
@@ -893,3 +894,10 @@ function CyberLabel({
     </div>
   );
 }
+=======
+import { redirect } from "next/navigation";
+
+export default function Home() {
+  redirect("/login");
+}
+>>>>>>> origin/Abhishek
