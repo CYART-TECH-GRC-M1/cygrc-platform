@@ -303,7 +303,6 @@ export default function LoginPage() {
             ? error.message
             : "Unable to sign in. Please check your connection and try again.",
       });
-      });
 
       setIsLoading(false);
     }
