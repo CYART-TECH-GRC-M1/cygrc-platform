@@ -132,3 +132,30 @@ def test_login_returns_role_in_token():
     from backend.core.security import decode_token
     payload = decode_token(token)
     assert payload["role"] == "Admin"
+
+
+def test_verify_token_valid():
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@test.com", "password": "adminpass123"},
+    )
+    token = response.json()["access_token"]
+
+    verify_resp = client.post(
+        "/api/v1/auth/verify",
+        json={"token": token},
+    )
+    assert verify_resp.status_code == 200
+    data = verify_resp.json()
+    assert data["valid"] is True
+    assert data["role"] == "Admin"
+
+
+def test_verify_token_invalid():
+    verify_resp = client.post(
+        "/api/v1/auth/verify",
+        json={"token": "invalid.jwt.token"},
+    )
+    assert verify_resp.status_code == 200
+    assert verify_resp.json()["valid"] is False
+

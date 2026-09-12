@@ -12,17 +12,25 @@ TODO: Replace with Keycloak token validation once ready.
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Any, Dict, Optional
 
-from backend.auth.schemas import LoginRequest, TokenResponse, UserInfo
+from backend.auth.schemas import (
+    LoginRequest,
+    TokenResponse,
+    TokenVerifyRequest,
+    TokenVerifyResponse,
+    UserInfo,
+)
 from backend.core.config import settings
 from backend.core.dependencies import get_current_user, require_role
 from backend.core.security import (
     create_access_token,
+    decode_token,
     get_password_hash,
     keycloak_password_login,
     verify_password,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
 
 _LOCAL_USERS = {
     "admin@test.com": {
@@ -110,8 +118,23 @@ async def whoami(user: Dict[str, Any] = Depends(get_current_user)) -> UserInfo:
     )
 
 
+@router.post("/verify", response_model=TokenVerifyResponse)
+async def verify_token(payload: TokenVerifyRequest) -> TokenVerifyResponse:
+    """Verify active JWT token status."""
+    token_data = decode_token(payload.token)
+    if not token_data:
+        return TokenVerifyResponse(valid=False)
+    return TokenVerifyResponse(
+        valid=True,
+        user_id=token_data.get("sub"),
+        tenant_id=token_data.get("tenant_id"),
+        role=token_data.get("role"),
+    )
+
+
 @router.delete("/admin-only-test")
 async def admin_only_test(
     role: str = Depends(require_role(["Admin", "Tenant Admin"])),
 ) -> Dict[str, Any]:
     return {"message": f"Access granted to role '{role}'."}
+

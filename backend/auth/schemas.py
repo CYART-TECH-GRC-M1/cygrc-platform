@@ -23,3 +23,14 @@ class UserInfo(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     roles: Optional[List[str]] = None
+
+
+class TokenVerifyRequest(BaseModel):
+    token: str
+
+
+class TokenVerifyResponse(BaseModel):
+    valid: bool
+    user_id: Optional[str] = None
+    tenant_id: Optional[str] = None
+    role: Optional[str] = None
