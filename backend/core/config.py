@@ -21,6 +21,27 @@ class Settings(BaseSettings):
 
     SQLALCHEMY_DATABASE_URI: Optional[str] = None
 
+    KEYCLOAK_ENABLED: bool = False
+    LOCAL_AUTH_ENABLED: bool = True
+    KEYCLOAK_SERVER_URL: str = "http://localhost:8080"
+    KEYCLOAK_REALM: str = "cygrc"
+    KEYCLOAK_CLIENT_ID: str = "cygrc-backend"
+    KEYCLOAK_CLIENT_SECRET: Optional[str] = None
+    KEYCLOAK_AUDIENCE: Optional[str] = None
+
+    @property
+    def keycloak_realm_url(self) -> str:
+        return f"{self.KEYCLOAK_SERVER_URL.rstrip('/')}/realms/{self.KEYCLOAK_REALM}"
+
+    @property
+    def keycloak_jwks_url(self) -> str:
+        return f"{self.keycloak_realm_url}/protocol/openid-connect/certs"
+
+    @property
+    def keycloak_token_url(self) -> str:
+        return f"{self.keycloak_realm_url}/protocol/openid-connect/token"
+
+
     @property
     def async_database_url(self) -> str:
         if self.SQLALCHEMY_DATABASE_URI:
