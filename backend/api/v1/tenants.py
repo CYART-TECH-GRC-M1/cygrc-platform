@@ -4,7 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.database import get_db
-from backend.core.dependencies import get_current_tenant_id
+from backend.core.dependencies import get_current_tenant_id, require_role
 from backend.models.control import Control, Framework
 from backend.models.tenant import Tenant
 from backend.models.tenant_control import TenantControlMapping
@@ -31,11 +31,10 @@ async def create_tenant(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    """Register/Onboard a new company (tenant)."""
+    """Register/Onboard a new company (tenant). Public signup endpoint — no auth required."""
     if tenant_in.domain:
         result = await db.execute(select(Tenant).where(Tenant.domain == tenant_in.domain))
-        existing_tenant = result.scalars().first()
-        if existing_tenant:
+        if result.scalars().first():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Tenant with domain '{tenant_in.domain}' already exists."
@@ -58,7 +57,7 @@ async def get_current_tenant(
     current_tenant_id: str = Depends(get_current_tenant_id),
     db: AsyncSession = Depends(get_db)
 ):
-    """Fetch current tenant details using tenant security dependency."""
+    """Fetch the authenticated caller's own tenant details."""
     try:
         tenant_uuid = UUID(current_tenant_id)
     except ValueError:
@@ -77,13 +76,13 @@ async def get_current_tenant(
     return tenant
 
 
-@router.get("/", response_model=List[TenantResponse])
+@router.get("/", response_model=List[TenantResponse], dependencies=[Depends(require_role(["Super Admin"]))])
 async def list_tenants(
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_db)
 ):
-    """List all registered tenants."""
+    """List all registered tenants. Super Admin only — cross-tenant visibility."""
     result = await db.execute(select(Tenant).offset(skip).limit(limit))
     return result.scalars().all()
 
@@ -157,12 +156,12 @@ async def list_tenant_controls(
     ]
 
 
-@router.get("/{tenant_id}", response_model=TenantResponse)
+@router.get("/{tenant_id}", response_model=TenantResponse, dependencies=[Depends(require_role(["Super Admin"]))])
 async def get_tenant_by_id(
     tenant_id: UUID,
     db: AsyncSession = Depends(get_db)
 ):
-    """Get tenant profile by tenant_id."""
+    """Get any tenant's profile by ID. Super Admin only — cross-tenant visibility."""
     result = await db.execute(select(Tenant).where(Tenant.tenant_id == tenant_id))
     tenant = result.scalars().first()
     if not tenant:
@@ -177,9 +176,24 @@ async def get_tenant_by_id(
 async def update_tenant(
     tenant_id: UUID,
     tenant_in: TenantUpdate,
+    current_tenant_id: str = Depends(get_current_tenant_id),
     db: AsyncSession = Depends(get_db)
 ):
-    """Update tenant information."""
+    """Update tenant information — restricted to the caller's own tenant."""
+    try:
+        auth_tenant_uuid = UUID(current_tenant_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid tenant ID format in header/token."
+        )
+
+    if tenant_id != auth_tenant_uuid:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You may only update your own tenant."
+        )
+
     result = await db.execute(select(Tenant).where(Tenant.tenant_id == tenant_id))
     tenant = result.scalars().first()
     if not tenant:
