@@ -64,6 +64,26 @@ const navItems = [
         path: "/incidents",
       },
       {
+        label: "SOC Alerts",
+        icon: AlertTriangle,
+        path: "/soc/alerts",
+      },
+      {
+        label: "SOC Cases",
+        icon: ShieldCheck,
+        path: "/soc/cases",
+      },
+      {
+        label: "VAPT Findings",
+        icon: Boxes,
+        path: "/vapt/findings",
+      },
+      {
+        label: "DFIR Investigation",
+        icon: ClipboardCheck,
+        path: "/dfir/investigation",
+      },
+      {
         label: "Reports",
         icon: FileBarChart,
         path: "/reports",

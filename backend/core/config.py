@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     def async_database_url(self) -> str:
         if self.SQLALCHEMY_DATABASE_URI:
             return self.SQLALCHEMY_DATABASE_URI
+        if os.getenv("USE_SQLITE", "true").lower() == "true":
+            return "sqlite+aiosqlite:///./cygrc.db"
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     class Config:
