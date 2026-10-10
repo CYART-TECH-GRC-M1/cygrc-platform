@@ -1,11 +1,13 @@
 from typing import Any, Callable, Dict, List, Optional
 
 from fastapi import Depends, Header, HTTPException, status
+from fastapi.security import HTTPBearer
 
 from backend.core.security import validate_token
 
 
 BEARER_PREFIX = "Bearer"
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def unauthorized(detail: str) -> HTTPException:
@@ -46,12 +48,17 @@ def _extract_bearer_token(authorization: Optional[str]) -> str:
     return token
 
 
+
 async def get_current_user(
     authorization: Optional[str] = Header(
         default=None,
         alias="Authorization",
     ),
+    bearer_credentials=Depends(bearer_scheme),
 ) -> Dict[str, Any]:
+    if not authorization and bearer_credentials:
+        authorization = f"Bearer {bearer_credentials.credentials}"
+
     token = _extract_bearer_token(authorization)
 
     try:

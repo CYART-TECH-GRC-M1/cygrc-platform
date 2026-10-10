@@ -9,6 +9,8 @@ from backend.models.stix_object import StixObject
 from backend.models.incident_case import IncidentCase
 from backend.models.cve_finding import CVEFinding
 from backend.models.campaign import RedTeamCampaign
+from backend.models.dfir import DfirChainOfCustody, CustodyAction
+from backend.models.evidence import Evidence
 
 try:
     from backend.models.role import Role, UserRole
@@ -31,6 +33,9 @@ try:
         "IncidentCase",
         "CVEFinding",
         "RedTeamCampaign",
+        "DfirChainOfCustody",
+        "CustodyAction",
+        "Evidence",
     ]
 except ImportError:
     __all__ = [
@@ -49,4 +54,8 @@ except ImportError:
         "IncidentCase",
         "CVEFinding",
         "RedTeamCampaign",
+        "DfirChainOfCustody",
+        "CustodyAction",
+        "Evidence",
     ]
+
