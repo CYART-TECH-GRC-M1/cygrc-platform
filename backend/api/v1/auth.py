@@ -1,5 +1,5 @@
 """
-TEMPORARY LOCAL AUTH — placeholder until Keycloak integration is confirmed.
+TEMPORARY LOCAL AUTH â€” placeholder until Keycloak integration is confirmed.
 
 The `users` table has no password column (schema.sql), which indicates
 production auth is meant to flow through Keycloak. Until that's wired up
@@ -35,7 +35,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 _LOCAL_USERS = {
     "admin@test.com": {
         "user_id": "00000000-0000-0000-0000-000000000001",
-        "tenant_id": "00000000-0000-0000-0000-00000000000a",
+        "tenant_id": "ad5ccc2e-209d-441c-ac6d-a47bcccb8e66",
         "role": "Admin",
         "hashed_password": get_password_hash("adminpass123"),
     },

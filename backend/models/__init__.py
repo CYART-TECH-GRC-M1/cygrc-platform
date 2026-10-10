@@ -2,7 +2,7 @@ from backend.models.tenant import Tenant, TenantStatus
 from backend.models.user import User
 from backend.models.control import Framework, Control
 from backend.models.tenant_control import TenantControlMapping
-
+from backend.models.dfir import DfirChainOfCustody, CustodyAction
 try:
     from backend.models.role import Role, UserRole
 
@@ -15,6 +15,8 @@ try:
         "Framework",
         "Control",
         "TenantControlMapping",
+        "DfirChainOfCustody",
+        "CustodyAction",
     ]
 except ImportError:
     __all__ = [

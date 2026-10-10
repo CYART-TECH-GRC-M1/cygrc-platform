@@ -20,3 +20,9 @@ api_router.include_router(controls_router, prefix="/controls", tags=["Controls"]
 
 # Developer 3/4 Module Routers (Authentication & RBAC Security)
 api_router.include_router(auth_router, prefix="", tags=["Auth"])
+
+from backend.api.v1.dfir import router as dfir_router
+
+
+# Module 2 - Digital Forensics & Incident Response
+api_router.include_router(dfir_router, prefix='/dfir', tags=['DFIR'])
