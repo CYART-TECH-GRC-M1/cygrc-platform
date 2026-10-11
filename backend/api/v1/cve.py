@@ -11,13 +11,15 @@ from backend.models.cve_finding import CVEFinding
 from backend.services.cve_feed_service import CVEFeedService
 from backend.services.vulnerability_prioritization import VulnerabilityPrioritizationService
 from backend.services.grc_evidence_bridge import GRCEvidenceBridgeService
+from backend.api.v1.findings import router as findings_router
 
 router = APIRouter()
+router.include_router(findings_router, prefix="/findings", tags=["VAPT Scanner - Findings"])
 
 
 class CVEResponse(BaseModel):
     cve_id: str
-    cvss_score: float
+    cvss_score: Optional[float] = None
     cvss_vector: Optional[str] = None
     cisa_kev: bool
     summary: Optional[str] = None
@@ -30,12 +32,13 @@ class CVEResponse(BaseModel):
 
 
 class CVESyncRequest(BaseModel):
-    feed_source: str = "NVD_CISA_KEV"
-    entries: List[Dict[str, Any]]
+    feed_source: Optional[str] = "NVD_CISA_KEV"
+    entries: Optional[List[Dict[str, Any]]] = None
+    use_live_feed: Optional[bool] = False
 
 
 class PrioritizeCalculateRequest(BaseModel):
-    cvss_score: float
+    cvss_score: Optional[float] = None
     is_cisa_kev: bool = False
     asset_criticality: str = "HIGH"  # LOW, MEDIUM, HIGH, CRITICAL
     has_mitigating_control: bool = False
@@ -55,9 +58,16 @@ async def sync_cve_feeds(
 ):
     result = await CVEFeedService.sync_daily_cve_feeds(
         cve_entries=payload.entries,
+        use_live_feed=payload.use_live_feed or False,
         db=db
     )
     return result
+
+
+@router.get("/feed-status")
+async def get_cve_feed_status():
+    """Returns feed freshness metadata, last sync timestamp, and active CISA KEV count."""
+    return CVEFeedService.get_feed_status()
 
 
 @router.post("/prioritize")

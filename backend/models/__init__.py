@@ -12,6 +12,8 @@ from backend.models.campaign import RedTeamCampaign
 from backend.models.dfir import DfirChainOfCustody, CustodyAction
 from backend.models.evidence import Evidence
 from backend.models.audit import AuditLog
+from backend.models.scan_schedule import ScanSchedule, ScanJob
+from backend.models.vulnerability_finding import VulnerabilityFinding
 
 try:
     from backend.models.role import Role, UserRole
@@ -37,6 +39,10 @@ try:
         "DfirChainOfCustody",
         "CustodyAction",
         "Evidence",
+        "AuditLog",
+        "ScanSchedule",
+        "ScanJob",
+        "VulnerabilityFinding",
     ]
 except ImportError:
     __all__ = [
@@ -58,5 +64,8 @@ except ImportError:
         "DfirChainOfCustody",
         "CustodyAction",
         "Evidence",
+        "AuditLog",
+        "ScanSchedule",
+        "ScanJob",
+        "VulnerabilityFinding",
     ]
-

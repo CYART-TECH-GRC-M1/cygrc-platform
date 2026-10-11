@@ -21,6 +21,7 @@ from backend.api.v1.ai_copilot import router as ai_copilot_router
 from backend.api.v1.jira import router as jira_router
 from backend.api.v1.campaigns import router as campaigns_router
 from backend.api.v1.dfir import router as dfir_router
+from backend.api.v1.findings import router as findings_router
 
 from backend.core.dependencies import get_current_user
 
@@ -55,3 +56,4 @@ api_router.include_router(ai_copilot_router, prefix="/ai", tags=["Cyber AI SOC C
 api_router.include_router(jira_router, prefix="/vapt/jira", tags=["VAPT Scanner - Jira Push"])
 api_router.include_router(campaigns_router, prefix="/campaigns", tags=["Red Team - Campaigns"])
 api_router.include_router(dfir_router, prefix="/dfir", tags=["DFIR - Evidence Chain of Custody"])
+api_router.include_router(findings_router, prefix="/vapt/findings", tags=["VAPT Scanner - Findings"])
