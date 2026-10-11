@@ -26,6 +26,7 @@ from backend.core.security import (
     decode_token,
     get_password_hash,
     keycloak_password_login,
+    validate_token,
     verify_password,
 )
 
@@ -92,7 +93,7 @@ async def login(payload: LoginRequest) -> TokenResponse:
     if kc_result is not None:
         return kc_result
 
-    if settings.LOCAL_AUTH_ENABLED or not settings.KEYCLOAK_ENABLED:
+    if settings.is_local_auth_allowed:
         local_result = _try_local_login(payload)
         if local_result is not None:
             return local_result
@@ -120,8 +121,8 @@ async def whoami(user: Dict[str, Any] = Depends(get_current_user)) -> UserInfo:
 
 @router.post("/verify", response_model=TokenVerifyResponse)
 async def verify_token(payload: TokenVerifyRequest) -> TokenVerifyResponse:
-    """Verify active JWT token status."""
-    token_data = decode_token(payload.token)
+    """Verify active JWT token status with cryptographic validation."""
+    token_data = validate_token(payload.token)
     if not token_data:
         return TokenVerifyResponse(valid=False)
     return TokenVerifyResponse(

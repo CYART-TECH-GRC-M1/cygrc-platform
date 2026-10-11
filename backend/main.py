@@ -1,6 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from backend.core.config import settings
+from backend.core.database import AsyncSessionLocal
 from backend.api.router import api_router
 import backend.models  # noqa: F401 — register ORM models (including TenantControlMapping)
 
@@ -31,8 +34,34 @@ def home():
     }
 
 
-@app.get("/health")
-def health():
+@app.get("/health/live")
+def liveness():
     return {
-        "status": "Healthy"
+        "status": "UP",
+        "environment": settings.ENVIRONMENT,
     }
+
+
+@app.get("/health")
+async def health():
+    db_status = "UNKNOWN"
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+        db_status = "UP"
+    except Exception as e:
+        db_status = f"DOWN: {str(e)[:100]}"
+
+    is_healthy = db_status == "UP"
+    resp = {
+        "status": "Healthy" if is_healthy else "Degraded",
+        "app": "UP",
+        "environment": settings.ENVIRONMENT,
+        "dependencies": {
+            "database": db_status,
+            "keycloak": "CONFIGURED" if settings.KEYCLOAK_ENABLED else "DISABLED",
+        }
+    }
+    if not is_healthy:
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=resp)
+    return resp

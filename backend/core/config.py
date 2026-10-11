@@ -21,6 +21,12 @@ class Settings(BaseSettings):
 
     SQLALCHEMY_DATABASE_URI: Optional[str] = None
 
+    ENVIRONMENT: str = "development"  # "development", "staging", "production", "test"
+    ALLOW_DEV_TENANT_HEADER: bool = True
+
+    TOKEN_ISSUER: Optional[str] = None
+    TOKEN_AUDIENCE: Optional[str] = None
+
     KEYCLOAK_ENABLED: bool = False
     LOCAL_AUTH_ENABLED: bool = True
     KEYCLOAK_SERVER_URL: str = "http://localhost:8080"
@@ -30,6 +36,23 @@ class Settings(BaseSettings):
     KEYCLOAK_CLIENT_SECRET: Optional[str] = None
     KEYCLOAK_AUDIENCE: Optional[str] = None
     CORS_ORIGINS: str = "http://localhost:3000"
+
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT.strip().lower() == "production"
+
+    @property
+    def is_local_auth_allowed(self) -> bool:
+        """Local fallback auth is strictly forbidden in production."""
+        if self.is_production():
+            return False
+        return self.LOCAL_AUTH_ENABLED or not self.KEYCLOAK_ENABLED
+
+    @property
+    def is_dev_tenant_header_allowed(self) -> bool:
+        """Arbitrary X-Tenant-ID headers without auth are strictly forbidden in production."""
+        if self.is_production():
+            return False
+        return self.ALLOW_DEV_TENANT_HEADER
 
     @property
     def keycloak_realm_url(self) -> str:

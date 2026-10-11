@@ -69,9 +69,43 @@ export default function SOCAlertQueuePage() {
     }
   };
 
+  const [streamConnected, setStreamConnected] = useState(false);
+
   useEffect(() => {
     fetchAlerts();
   }, [statusFilter, severityFilter]);
+
+  // Connect to backend Server-Sent Events stream for real-time alert updates
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sse = new EventSource("/api/v1/alerts/stream");
+
+    sse.onopen = () => {
+      setStreamConnected(true);
+    };
+
+    sse.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data && data.alert_id) {
+          setAlerts((prev) => {
+            if (prev.some((a) => a.alert_id === data.alert_id)) return prev;
+            return [data, ...prev];
+          });
+        }
+      } catch (err) {
+        // Keepalive comment / heartbeat
+      }
+    };
+
+    sse.onerror = () => {
+      setStreamConnected(false);
+    };
+
+    return () => {
+      sse.close();
+    };
+  }, []);
 
   const handleCreateAlert = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,6 +191,13 @@ export default function SOCAlertQueuePage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-2 text-xs">
+            <span className={`h-2.5 w-2.5 rounded-full ${streamConnected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+            <span className="font-medium text-slate-300">
+              {streamConnected ? "Live SSE Active" : "Reconnecting SSE..."}
+            </span>
+          </div>
+
           <button
             onClick={fetchAlerts}
             className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-2.5 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition"
@@ -167,10 +208,10 @@ export default function SOCAlertQueuePage() {
 
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition"
+            className="flex items-center gap-2 rounded-xl bg-slate-800 border border-indigo-500/30 px-4 py-2.5 text-xs font-semibold text-indigo-300 shadow-lg hover:bg-slate-750 transition"
           >
             <Plus className="h-4 w-4" />
-            Simulate Alert Ingestion
+            Simulate Alert (Dev Demo)
           </button>
         </div>
       </div>

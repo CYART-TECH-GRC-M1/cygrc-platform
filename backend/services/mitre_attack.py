@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Set
 
 
 class MitreAttackService:
@@ -59,4 +59,41 @@ class MitreAttackService:
             "total_tactics": len(cls.TACTICS_V19),
             "total_techniques_mapped": 222,
             "matrix": tactics_map
+        }
+
+    @classmethod
+    def get_verified_detection_coverage(cls) -> Dict[str, Any]:
+        """
+        Distinguishes mapped detection rules from rules that have actually passed
+        detection test harness evaluation (positive and negative tests).
+        Never counts an untested rule as production-ready.
+        """
+        from backend.services.starter_rules import StarterRulesHarness
+
+        harness_results = StarterRulesHarness.test_all_starter_rules()
+
+        mapped_technique_ids: Set[str] = set()
+        tested_technique_ids: Set[str] = set()
+
+        for r in harness_results.get("rules", []):
+            tech = r.get("technique")
+            if tech:
+                mapped_technique_ids.add(tech)
+                if r.get("production_ready", False):
+                    tested_technique_ids.add(tech)
+
+        total_known_techniques = len(cls.TECHNIQUES_V19)
+        verified_coverage_pct = (len(tested_technique_ids) / total_known_techniques) * 100 if total_known_techniques else 0.0
+
+        return {
+            "version": "MITRE ATT&CK v19.1",
+            "total_known_matrix_techniques": total_known_techniques,
+            "mapped_techniques_count": len(mapped_technique_ids),
+            "verified_tested_techniques_count": len(tested_technique_ids),
+            "verified_coverage_percentage": round(verified_coverage_pct, 1),
+            "starter_rules_total": harness_results.get("total_rules", 0),
+            "starter_rules_verified_passing": harness_results.get("passed_rules", 0),
+            "harness_pass_rate": harness_results.get("pass_rate", "0.0%"),
+            "verified_techniques": sorted(list(tested_technique_ids)),
+            "mapped_techniques": sorted(list(mapped_technique_ids)),
         }

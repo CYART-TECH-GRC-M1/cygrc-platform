@@ -11,6 +11,7 @@ from backend.models.cve_finding import CVEFinding
 from backend.models.campaign import RedTeamCampaign
 from backend.models.dfir import DfirChainOfCustody, CustodyAction
 from backend.models.evidence import Evidence
+from backend.models.audit import AuditLog
 
 try:
     from backend.models.role import Role, UserRole

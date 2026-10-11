@@ -46,9 +46,22 @@ class IntelIntegrationService:
 
             stix_id = f"indicator--misp-{uuid.uuid5(uuid.NAMESPACE_DNS, str(value))}"
 
-            stmt = select(StixObject).where(StixObject.stix_id == stix_id)
+            # Check existing for THIS tenant specifically (tenant isolation)
+            stmt = select(StixObject).where(
+                StixObject.stix_id == stix_id,
+                StixObject.tenant_id == tenant_id,
+            )
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
+
+            # If the stix_id exists for another tenant, scope the id with tenant prefix to avoid collision
+            if not existing:
+                collision_stmt = select(StixObject).where(
+                    StixObject.stix_id == stix_id,
+                    StixObject.tenant_id != tenant_id,
+                )
+                if (await db.execute(collision_stmt)).scalar_one_or_none():
+                    stix_id = f"indicator--misp-{tenant_id[:8]}-{uuid.uuid5(uuid.NAMESPACE_DNS, str(value))}"
 
             raw_stix = {
                 "id": stix_id,
@@ -95,7 +108,7 @@ class IntelIntegrationService:
         tenant_id: str,
         db: AsyncSession
     ) -> Dict[str, Any]:
-        """Parses OpenCTI GraphQL STIX entity payloads and stores in stix_objects."""
+        """Parses OpenCTI GraphQL STIX entity payloads and stores in stix_objects with tenant isolation."""
         entities = graphql_data.get("data", {}).get("stixDomainObjects", [])
         ingested = 0
 
@@ -116,9 +129,22 @@ class IntelIntegrationService:
                 "confidence": entity.get("confidence", 90)
             }
 
-            stmt = select(StixObject).where(StixObject.stix_id == stix_id)
+            stmt = select(StixObject).where(
+                StixObject.stix_id == stix_id,
+                StixObject.tenant_id == tenant_id,
+            )
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
+
+            # If the stix_id exists for another tenant, scope the id to prevent collision/tampering
+            if not existing:
+                collision_stmt = select(StixObject).where(
+                    StixObject.stix_id == stix_id,
+                    StixObject.tenant_id != tenant_id,
+                )
+                if (await db.execute(collision_stmt)).scalar_one_or_none():
+                    stix_id = f"{stix_id}-{tenant_id[:8]}"
+                    raw_stix["id"] = stix_id
 
             if existing:
                 existing.name = name

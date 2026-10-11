@@ -25,3 +25,9 @@ async def get_mitre_technique_details(technique_id: str):
                     "version": "v19.1"
                 }
     raise HTTPException(status_code=404, detail=f"Technique {technique_id} not found in MITRE ATT&CK v19.1 matrix")
+
+
+@router.get("/coverage")
+async def get_mitre_detection_coverage():
+    """Returns verified detection coverage distinguishing mapped rules from tested rules."""
+    return MitreAttackService.get_verified_detection_coverage()

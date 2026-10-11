@@ -24,8 +24,6 @@ node_modules/
 # misc
 .DS_Store
 *.pem
-*.db
-cygrc.db
 
 # debug
 npm-debug.log*
@@ -56,3 +54,10 @@ __pycache__/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# database and generated files
+*.db
+*.sqlite*
+combined_codebase.txt
+
+

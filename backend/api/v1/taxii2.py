@@ -89,10 +89,21 @@ async def ingest_stix_bundle(
         labels = obj.get("labels", [])
         confidence = obj.get("confidence", 75)
 
-        # Check existing
-        stmt = select(StixObject).where(StixObject.stix_id == stix_id)
+        # Check existing for THIS tenant specifically (tenant isolation)
+        stmt = select(StixObject).where(
+            StixObject.stix_id == stix_id,
+            StixObject.tenant_id == tenant_id,
+        )
         result = await db.execute(stmt)
         existing = result.scalar_one_or_none()
+
+        if not existing:
+            collision_stmt = select(StixObject).where(
+                StixObject.stix_id == stix_id,
+                StixObject.tenant_id != tenant_id,
+            )
+            if (await db.execute(collision_stmt)).scalar_one_or_none():
+                stix_id = f"{stix_id}-{tenant_id[:8]}"
 
         if existing:
             existing.name = name

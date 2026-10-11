@@ -19,8 +19,8 @@ interface CustodyRecord {
   custody_id: string;
   evidence_id: string;
   item_description: string;
-  custodian_name: str;
-  custodian_email: str;
+  custodian_name: string;
+  custodian_email: string;
   action: string;
   location?: string;
   hash_sha256?: string;

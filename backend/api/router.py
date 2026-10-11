@@ -55,4 +55,3 @@ api_router.include_router(ai_copilot_router, prefix="/ai", tags=["Cyber AI SOC C
 api_router.include_router(jira_router, prefix="/vapt/jira", tags=["VAPT Scanner - Jira Push"])
 api_router.include_router(campaigns_router, prefix="/campaigns", tags=["Red Team - Campaigns"])
 api_router.include_router(dfir_router, prefix="/dfir", tags=["DFIR - Evidence Chain of Custody"])
-

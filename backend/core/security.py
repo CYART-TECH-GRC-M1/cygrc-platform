@@ -35,36 +35,89 @@ def create_access_token(
     subject: Union[str, Any],
     tenant_id: str,
     role: str = "Employee",
-    expires_delta: Optional[timedelta] = None
+    expires_delta: Optional[timedelta] = None,
+    issuer: Optional[str] = None,
+    audience: Optional[str] = None,
+    extra_claims: Optional[Dict[str, Any]] = None,
 ) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    to_encode = {
+    to_encode: Dict[str, Any] = {
         "sub": str(subject),
         "tenant_id": str(tenant_id),
         "role": role,
-        "exp": expire
+        "roles": [role],
+        "exp": expire,
+        "iat": datetime.now(timezone.utc),
     }
+
+    iss = issuer or settings.TOKEN_ISSUER
+    if iss:
+        to_encode["iss"] = iss
+
+    aud = audience or settings.TOKEN_AUDIENCE
+    if aud:
+        to_encode["aud"] = aud
+
+    if extra_claims:
+        to_encode.update(extra_claims)
+
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
-def decode_token(token: str) -> Optional[Dict[str, Any]]:
+def decode_token(
+    token: str,
+    issuer: Optional[str] = None,
+    audience: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        expected_issuer = issuer or settings.TOKEN_ISSUER
+        expected_audience = audience or settings.TOKEN_AUDIENCE
+
+        options = {
+            "verify_signature": True,
+            "verify_exp": True,
+            "verify_iat": True,
+            "verify_iss": bool(expected_issuer),
+            "verify_aud": bool(expected_audience),
+        }
+
+        decode_kwargs: Dict[str, Any] = {
+            "token": token,
+            "key": settings.SECRET_KEY,
+            "algorithms": [settings.ALGORITHM],
+            "options": options,
+        }
+        if expected_issuer:
+            decode_kwargs["issuer"] = expected_issuer
+        if expected_audience:
+            decode_kwargs["audience"] = expected_audience
+
+        payload = jwt.decode(**decode_kwargs)
         return payload
-    except JWTError:
+    except exceptions.ExpiredSignatureError:
+        logger.warning("Token expired")
+        return None
+    except exceptions.JWTClaimsError as e:
+        logger.warning("Token claims validation failed: %s", e)
+        return None
+    except JWTError as e:
+        logger.warning("Token decoding failed: %s", e)
+        return None
+    except Exception as e:
+        logger.warning("Unexpected token decode error: %s", e)
         return None
 
 
-def _fetch_jwks() -> Optional[Dict[str, Any]]:
+def _fetch_jwks(force_refresh: bool = False) -> Optional[Dict[str, Any]]:
     global _jwks_cache, _jwks_cache_time
     now = time.time()
 
-    if _jwks_cache and (now - _jwks_cache_time) < _JWKS_CACHE_TTL:
+    if not force_refresh and _jwks_cache and (now - _jwks_cache_time) < _JWKS_CACHE_TTL:
         return _jwks_cache
 
     try:
@@ -87,16 +140,21 @@ def _get_key_from_header(token: str) -> Optional[str]:
         if not kid:
             return None
 
-        jwks = _fetch_jwks()
-        if not jwks:
-            return None
+        # 1. Try with cached JWKS
+        jwks = _fetch_jwks(force_refresh=False)
+        if jwks:
+            for key in jwks.get("keys", []):
+                if key.get("kid") == kid:
+                    return jwk.construct(key).to_pem().decode("utf-8")
 
-        for key in jwks.get("keys", []):
-            if key.get("kid") == kid:
-                public_key = jwk.construct(key).to_pem().decode("utf-8")
-                return public_key
+        # 2. Key rotation support: if kid not found, force refresh JWKS once
+        jwks = _fetch_jwks(force_refresh=True)
+        if jwks:
+            for key in jwks.get("keys", []):
+                if key.get("kid") == kid:
+                    return jwk.construct(key).to_pem().decode("utf-8")
 
-        logger.warning("No matching key found in JWKS for kid=%s", kid)
+        logger.warning("No matching key found in JWKS for kid=%s even after rotation refresh", kid)
         return None
     except Exception as e:
         logger.warning("Failed to extract key from token header: %s", e)
@@ -194,27 +252,38 @@ def decode_keycloak_token(token: str) -> Optional[Dict[str, Any]]:
 
 
 def validate_token(token: str) -> Optional[Dict[str, Any]]:
-    # Route tokens to the matching verifier so local tokens do not perform a
-    # blocking JWKS request before their signature is checked.
+    """
+    Validates JWT signature, expiration, issuer and audience.
+    Strictly forbids local auth fallback when running in production environment.
+    """
+    if not token or not isinstance(token, str):
+        return None
+
     try:
         algorithm = jwt.get_unverified_header(token).get("alg", "")
     except JWTError:
         algorithm = ""
 
-    local_auth_enabled = settings.LOCAL_AUTH_ENABLED or not settings.KEYCLOAK_ENABLED
+    local_allowed = settings.is_local_auth_allowed
 
-    if local_auth_enabled and algorithm.startswith("HS"):
+    if algorithm.startswith("HS"):
+        if not local_allowed:
+            logger.warning("Rejected local HS256 token: local auth is disabled in production")
+            return None
         local_payload = decode_token(token)
         if local_payload:
             return _normalize_claims(local_payload)
+        return None
 
-    if settings.KEYCLOAK_ENABLED and algorithm.startswith(("RS", "ES")):
-        keycloak_payload = decode_keycloak_token(token)
-        if keycloak_payload:
-            return keycloak_payload
+    if algorithm.startswith(("RS", "ES")):
+        if settings.KEYCLOAK_ENABLED:
+            keycloak_payload = decode_keycloak_token(token)
+            if keycloak_payload:
+                return keycloak_payload
+        return None
 
-    # Keep a fallback for legacy tokens with an unusual or unreadable header.
-    if local_auth_enabled:
+    # Fallback for unrecognized algorithm header
+    if local_allowed:
         local_payload = decode_token(token)
         if local_payload:
             return _normalize_claims(local_payload)

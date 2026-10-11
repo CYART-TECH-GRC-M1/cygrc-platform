@@ -1,8 +1,14 @@
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPBearer
 
+from backend.core.config import settings
+from backend.core.permissions import (
+    Permission,
+    has_permission,
+    normalize_role_name,
+)
 from backend.core.security import validate_token
 
 
@@ -48,16 +54,35 @@ def _extract_bearer_token(authorization: Optional[str]) -> str:
     return token
 
 
-
 async def get_current_user(
     authorization: Optional[str] = Header(
         default=None,
         alias="Authorization",
     ),
+    x_tenant_id: Optional[str] = Header(
+        default=None,
+        alias="X-Tenant-ID",
+    ),
     bearer_credentials=Depends(bearer_scheme),
 ) -> Dict[str, Any]:
     if not authorization and bearer_credentials:
         authorization = f"Bearer {bearer_credentials.credentials}"
+
+    if not authorization:
+        if settings.is_production() or not settings.is_dev_tenant_header_allowed:
+            raise unauthorized("Missing Authorization header.")
+        if x_tenant_id and x_tenant_id.strip():
+            return {
+                "user_id": "00000000-0000-0000-0000-000000000001",
+                "keycloak_id": None,
+                "tenant_id": x_tenant_id.strip(),
+                "role": "Super Admin",
+                "email": "dev-admin@cygrc.local",
+                "first_name": "Dev",
+                "last_name": "Admin",
+                "roles": ["Super Admin"],
+            }
+        raise unauthorized("Missing Authorization header.")
 
     token = _extract_bearer_token(authorization)
 
@@ -115,30 +140,49 @@ async def get_current_tenant_id(
     authorization: Optional[str] = Header(None),
 ) -> str:
     if authorization:
-        user = await get_current_user(authorization)
+        user = await get_current_user(authorization=authorization)
 
-        tenant_id = user.get("tenant_id")
+        token_tenant_id = user.get("tenant_id")
 
-        if not tenant_id:
+        if not token_tenant_id:
             raise unauthorized("Token does not contain a tenant_id claim.")
 
-        if not isinstance(tenant_id, str):
+        if not isinstance(token_tenant_id, str):
             raise unauthorized("Invalid tenant_id claim.")
 
-        tenant_id = tenant_id.strip()
-        if not tenant_id:
+        token_tenant_id = token_tenant_id.strip()
+        if not token_tenant_id:
             raise unauthorized("Token contains an empty tenant_id claim.")
 
-        return tenant_id
+        # If client also supplied an X-Tenant-ID header, verify it matches token
+        # unless caller has super-admin or platform-operator role
+        if x_tenant_id:
+            header_tenant_id = x_tenant_id.strip()
+            all_user_roles = [user.get("role")] + user.get("roles", [])
+            user_roles = [normalize_role_name(r) for r in all_user_roles if r]
+            is_platform_admin = any(
+                r in {"super admin", "platform operator", "admin"} for r in user_roles
+            )
+            if not is_platform_admin and header_tenant_id != token_tenant_id:
+                raise forbidden("Cross-tenant access forbidden: X-Tenant-ID does not match authenticated token.")
+            if is_platform_admin and header_tenant_id:
+                return header_tenant_id
 
-    if x_tenant_id:
+        return token_tenant_id
+
+    # If no Authorization header is provided:
+    if settings.is_production():
+        raise unauthorized(
+            "Authentication token required. Unauthenticated client tenant headers are strictly rejected in production."
+        )
+
+    if settings.is_dev_tenant_header_allowed and x_tenant_id:
         tenant_id = x_tenant_id.strip()
         if tenant_id:
             return tenant_id
 
     raise unauthorized(
-        "Tenant identity could not be verified. "
-        "Provide an Authorization Bearer token or X-Tenant-ID header."
+        "Tenant identity could not be verified. Provide an Authorization Bearer token."
     )
 
 
@@ -149,7 +193,7 @@ def require_role(
         raise ValueError("allowed_roles must contain at least one role.")
 
     normalized_allowed_roles = {
-        role.strip().lower()
+        normalize_role_name(role)
         for role in allowed_roles
         if isinstance(role, str) and role.strip()
     }
@@ -173,26 +217,21 @@ def require_role(
             raise unauthorized("Invalid authenticated user information.")
 
         primary_role = user.get("role")
-        if isinstance(primary_role, str):
-            primary_role = primary_role.strip()
-        else:
-            primary_role = None
-
-        if primary_role and primary_role.lower() in normalized_allowed_roles:
-            return primary_role
-
         user_roles = user.get("roles", [])
         if not isinstance(user_roles, list):
             user_roles = []
+        if primary_role:
+            user_roles = [primary_role] + user_roles
 
-        for user_role in user_roles:
-            if not isinstance(user_role, str):
-                continue
-            user_role = user_role.strip()
-            if not user_role:
-                continue
-            if user_role.lower() in normalized_allowed_roles:
-                return user_role
+        normalized_user_roles = {normalize_role_name(r) for r in user_roles if r}
+
+        # Platform Operator / Super Admin / Admin has universal role access
+        if any(r in {"super admin", "platform operator", "admin"} for r in normalized_user_roles):
+            return primary_role or "Admin"
+
+        matched = normalized_user_roles.intersection(normalized_allowed_roles)
+        if matched:
+            return next(iter(matched))
 
         displayed_role = primary_role or "none"
         raise forbidden(
@@ -201,3 +240,35 @@ def require_role(
         )
 
     return role_checker
+
+
+def require_permission(
+    permission: Union[Permission, str],
+) -> Callable:
+    async def permission_checker(
+        user: Optional[Dict[str, Any]] = Depends(get_current_user),
+        authorization: Optional[str] = Header(
+            default=None,
+            alias="Authorization",
+        ),
+    ) -> Dict[str, Any]:
+        if not isinstance(user, dict):
+            if authorization is None:
+                raise unauthorized("Missing Authorization header.")
+            user = await get_current_user(authorization=authorization)
+
+        primary_role = user.get("role")
+        user_roles = user.get("roles", [])
+        if not isinstance(user_roles, list):
+            user_roles = []
+        if primary_role:
+            user_roles = [primary_role] + user_roles
+
+        if not has_permission(user_roles, permission):
+            perm_str = permission.value if isinstance(permission, Permission) else str(permission)
+            raise forbidden(
+                f"Missing required permission '{perm_str}'. Access denied."
+            )
+        return user
+
+    return permission_checker
