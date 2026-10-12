@@ -37,6 +37,16 @@ class Settings(BaseSettings):
     KEYCLOAK_AUDIENCE: Optional[str] = None
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    # Velociraptor DFIR integration (disabled by default)
+    VELOCIRAPTOR_ENABLED: bool = False
+    VELOCIRAPTOR_CONFIG_PATH: Optional[str] = None
+    VELOCIRAPTOR_ORG_ID: Optional[str] = None
+
+        # DFIR analysis tools (disabled unless explicitly configured)
+    DFIR_EVIDENCE_ROOT: Optional[str] = None
+    VOLATILITY3_EXECUTABLE: Optional[str] = None
+    DFIR_ANALYSIS_TIMEOUT_SECONDS: int = 300
+
     def is_production(self) -> bool:
         return self.ENVIRONMENT.strip().lower() == "production"
 
@@ -76,13 +86,17 @@ class Settings(BaseSettings):
             return self.SQLALCHEMY_DATABASE_URI
         if os.getenv("USE_SQLITE", "true").lower() == "true":
             return "sqlite+aiosqlite:///./cygrc.db"
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        return (
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:"
+            f"{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:"
+            f"{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
 
     class Config:
         env_file = [
             os.path.join(BASE_DIR, ".env"),
             ".env",
-            "backend/.env"
+            "backend/.env",
         ]
         extra = "ignore"
 

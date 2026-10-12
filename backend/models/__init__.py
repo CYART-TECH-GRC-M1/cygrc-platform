@@ -69,3 +69,5 @@ except ImportError:
         "ScanJob",
         "VulnerabilityFinding",
     ]
+
+from backend.models.forensic_job import ForensicJob

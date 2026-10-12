@@ -17,3 +17,4 @@ openai
 langchain
 langgraph
 pytest
+pyvelociraptor==0.1.14

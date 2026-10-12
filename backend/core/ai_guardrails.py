@@ -1,9 +1,9 @@
-from typing import Dict, Any
+﻿from typing import Dict, Any
 from fastapi import HTTPException, status
 
 
 class CyberAIGuardrails:
-    """Enforces zero auto-action, draft watermark, and human approval sign-off tokens."""
+    """Validate AI drafts and fail closed when approval cannot be verified."""
 
     DRAFT_WATERMARK = "DRAFT_SUBJECT_TO_HUMAN_APPROVAL"
 
@@ -12,35 +12,33 @@ class CyberAIGuardrails:
         if not draft_response.get("is_draft", False):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cyber AI Guardrail Exception: AI generated output must be marked is_draft=True."
+                detail="AI output must be marked is_draft=True.",
             )
 
         if draft_response.get("draft_watermark") != cls.DRAFT_WATERMARK:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cyber AI Guardrail Exception: Missing valid watermark '{cls.DRAFT_WATERMARK}'."
+                detail="Missing or invalid AI draft watermark.",
             )
 
         if not draft_response.get("human_approval_token"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cyber AI Guardrail Exception: Human approval review token required before production sign-off."
+                detail="Human review reference is required.",
             )
 
         return True
 
     @classmethod
-    def sign_off_human_review(cls, human_approval_token: str, reviewer_email: str) -> Dict[str, Any]:
-        if not human_approval_token.startswith("APPROVAL-TOKEN-"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid human approval review token."
-            )
-
-        return {
-            "success": True,
-            "status": "APPROVED",
-            "human_approval_token": human_approval_token,
-            "reviewed_by": reviewer_email,
-            "message": "AI Copilot draft signed off by human reviewer for case inclusion."
-        }
+    def sign_off_human_review(
+        cls, human_approval_token: str, reviewer_email: str
+    ) -> Dict[str, Any]:
+        # No persistent draft/token registry or authenticated reviewer
+        # verification exists yet. Never claim approval without verification.
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail=(
+                "Human approval is unavailable until draft tokens are verified "
+                "against a stored pending draft and the reviewer is authenticated."
+            ),
+        )
