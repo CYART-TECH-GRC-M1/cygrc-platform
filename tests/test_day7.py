@@ -61,9 +61,11 @@ def test_team_d_ai_threat_analyzer_case_closure():
     resp = client.post("/api/v1/ai/case-closure-summary", json=closure_payload)
     assert resp.status_code == 200, resp.text
     data = resp.json()
-    assert data["status"] == "SUCCESS"
+    # The summary is a draft, not a verified incident-closure decision.
+    assert data["status"] == "DRAFT_REQUIRES_REVIEW"
     assert "executive_summary" in data
     assert len(data["lessons_learned"]) >= 3
+    assert data["human_review_required"] is True
 
 
 if __name__ == "__main__":

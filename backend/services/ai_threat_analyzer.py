@@ -1,10 +1,14 @@
-import uuid
-from datetime import datetime
-from typing import Dict, Any, List
+﻿import uuid
+from datetime import datetime, timezone
+from typing import Dict, Any
 
 
 class AIThreatAnalyzerService:
-    """AI Threat Analyzer service generating structured post-incident summaries upon case closure."""
+    """Generate evidence-aware post-incident summaries.
+
+    This service creates a draft from supplied case information. It does not
+    independently verify incident facts or claim that remediation succeeded.
+    """
 
     @staticmethod
     def generate_case_closure_summary(
@@ -12,33 +16,46 @@ class AIThreatAnalyzerService:
         case_number: str,
         title: str,
         summary: str,
-        alerts_count: int = 2
+        alerts_count: int = 2,
     ) -> Dict[str, Any]:
         report_id = f"AI-RPT-{uuid.uuid4().hex[:8].upper()}"
 
-        root_cause_analysis = (
-            f"Adversary initial access achieved via weaponized phishing email payload targeting unpatched endpoint. "
-            f"Observed secondary command and control traffic targeting external IP infrastructure."
-        )
+        safe_summary = (summary or "").strip()
+        if not safe_summary:
+            safe_summary = (
+                "No incident summary or supporting evidence was provided. "
+                "Further investigation is required before drawing conclusions."
+            )
 
         executive_summary = (
-            f"Incident {case_number} ('{title}') was successfully detected, contained, and remediated by the SOC team. "
-            f"A total of {alerts_count} SIEM alerts were triaged and linked to this incident."
+            f"Draft summary for incident {case_number} ('{title}'). "
+            f"The supplied record reports {max(0, alerts_count)} associated "
+            f"alert(s). Detection, containment, and remediation status have "
+            f"not been independently verified. Human review is required."
+        )
+
+        root_cause_analysis = (
+            "Root cause is undetermined from the information supplied. "
+            "Do not attribute an attack vector, vulnerability, or threat actor "
+            "without supporting evidence. Review the incident record and "
+            "associated forensic artifacts before reaching a conclusion."
         )
 
         lessons_learned = [
-            "Enforce mandatory multi-factor authentication (MFA) on all VPN and remote access endpoints.",
-            "Deploy automated Patch Management for CVE-2026 findings across public-facing web servers.",
-            "Update Wazuh SIEM detection rules to alert on base64-encoded PowerShell process execution."
+            "Document the evidence supporting the incident timeline and conclusions.",
+            "Verify containment and remediation actions before marking them complete.",
+            "Record unresolved questions and assign follow-up investigation tasks.",
         ]
 
         return {
-            "status": "SUCCESS",
+            "status": "DRAFT_REQUIRES_REVIEW",
             "report_id": report_id,
             "case_id": case_id,
             "case_number": case_number,
             "executive_summary": executive_summary,
             "root_cause_analysis": root_cause_analysis,
             "lessons_learned": lessons_learned,
-            "generated_at": datetime.utcnow().isoformat()
+            "source_summary": safe_summary,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "human_review_required": True,
         }

@@ -90,29 +90,65 @@ def test_team_b_asset_discovery():
     assert cloud_assets[0]["asset_type"] == "CLOUD"
 
 
-def test_team_c_velociraptor_forensics():
-    # Test Velociraptor Collection Dispatch
+def test_team_c_velociraptor_disabled_returns_503(monkeypatch):
+    from backend.api.v1 import forensics as forensics_module
+    from backend.services.velociraptor_service import VelociraptorServiceError
+
+    def disabled_dispatch(*args, **kwargs):
+        raise VelociraptorServiceError("Velociraptor integration is disabled.")
+
+    monkeypatch.setattr(forensics_module, "dispatch_collection", disabled_dispatch)
+
     collect_payload = {
         "client_id": "C.1234567890abcdef",
         "artifact_name": "Windows.KapeFiles.Targets",
         "custodian_name": "Dr. Alan Grant",
         "custodian_email": "alan@cygrc.local",
         "parameters": {"Target": "AntivirusLogs"},
-        "notes": "Emergency collection after malware alert."
+        "notes": "Emergency collection after malware alert.",
     }
-    resp = client.post("/api/v1/forensics/collect", json=collect_payload, headers=HEADERS)
+
+    resp = client.post(
+        "/api/v1/forensics/collect",
+        json=collect_payload,
+        headers=HEADERS,
+    )
+
+    assert resp.status_code == 503, resp.text
+    assert "disabled" in resp.json()["detail"].lower()
+
+
+def test_team_c_velociraptor_dispatch_returns_flow_id(monkeypatch):
+    from backend.api.v1 import forensics as forensics_module
+
+    monkeypatch.setattr(
+        forensics_module,
+        "dispatch_collection",
+        lambda *args, **kwargs: "F.12345678",
+    )
+
+    collect_payload = {
+        "client_id": "C.1234567890abcdef",
+        "artifact_name": "Windows.KapeFiles.Targets",
+        "custodian_name": "Dr. Alan Grant",
+        "custodian_email": "alan@cygrc.local",
+        "parameters": {"Target": "AntivirusLogs"},
+        "notes": "Emergency collection after malware alert.",
+    }
+
+    resp = client.post(
+        "/api/v1/forensics/collect",
+        json=collect_payload,
+        headers=HEADERS,
+    )
+
     assert resp.status_code == 202, resp.text
     data = resp.json()
+    assert data["collection_id"] == "F.12345678"
     assert data["status"] == "DISPATCHED"
-    assert data["evidence_id"].startswith("EVID-")
-    assert len(data["sha256_hash"]) == 64
-
-    # Verify Auto-Appended Chain of Custody entry
-    coc_resp = client.get(f"/api/v1/chain-of-custody/{data['chain_of_custody_id']}", headers=HEADERS)
-    assert coc_resp.status_code == 200
-    coc_data = coc_resp.json()
-    assert coc_data["evidence_id"] == data["evidence_id"]
-    assert coc_data["custodian_name"] == "Dr. Alan Grant"
+    assert data["evidence_id"] is None
+    assert data["sha256_hash"] is None
+    assert data["chain_of_custody_id"] is None
 
 
 def test_team_d_taxii2_server():
@@ -154,3 +190,45 @@ if __name__ == "__main__":
     test_team_c_velociraptor_forensics()
     test_team_d_taxii2_server()
     print("All Day 2 backend API tests passed successfully!")
+
+
+
+def test_forensic_job_status_hides_other_tenants(monkeypatch):
+    from types import SimpleNamespace
+    from backend.api.v1 import forensics as forensics_module
+    from backend.core.dependencies import get_current_tenant_id, get_current_user
+    from backend.core.database import get_db
+
+    class FakeResult:
+        def scalar_one_or_none(self):
+            return None
+
+    class FakeDB:
+        async def execute(self, query):
+            return FakeResult()
+
+    async def fake_db():
+        yield FakeDB()
+
+    app = forensics_module.router
+    from backend.main import app as main_app
+
+    main_app.dependency_overrides[get_current_tenant_id] = (
+        lambda: "tenant-b"
+    )
+    main_app.dependency_overrides[get_current_user] = (
+        lambda: {"user_id": "user-b", "tenant_id": "tenant-b"}
+    )
+    main_app.dependency_overrides[get_db] = fake_db
+
+    try:
+        response = client.get(
+            "/api/v1/forensics/jobs/job-owned-by-tenant-a",
+            headers={"X-Tenant-ID": "tenant-b"},
+        )
+        assert response.status_code == 404, response.text
+        assert response.json()["detail"] == "Forensic job not found."
+    finally:
+        main_app.dependency_overrides.pop(get_current_tenant_id, None)
+        main_app.dependency_overrides.pop(get_current_user, None)
+        main_app.dependency_overrides.pop(get_db, None)

@@ -1,10 +1,12 @@
-from typing import Dict, Any
+﻿from typing import Dict, Any
+
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import get_db
-from backend.core.dependencies import get_current_tenant_id
+from backend.core.dependencies import get_current_tenant_id, require_permission
+from backend.core.permissions import Permission
 from backend.services.intel_integrations import IntelIntegrationService
 
 router = APIRouter()
@@ -21,28 +23,32 @@ class OpenCTIGraphQLRequest(BaseModel):
 @router.post("/misp/sync", status_code=status.HTTP_200_OK)
 async def sync_misp_event(
     payload: MispSyncRequest,
+    _permission: Dict[str, Any] = Depends(
+        require_permission(Permission.INTEL_INGEST)
+    ),
     tenant_id: str = Depends(get_current_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Ingest PyMISP event attributes and convert into STIX 2.1 Indicators."""
-    result = await IntelIntegrationService.sync_misp_events(
+    """Ingest MISP event data with permission checks."""
+    return await IntelIntegrationService.sync_misp_events(
         misp_payload=payload.misp_payload,
         tenant_id=tenant_id,
-        db=db
+        db=db,
     )
-    return result
 
 
 @router.post("/opencti/query", status_code=status.HTTP_200_OK)
 async def sync_opencti_graphql(
     payload: OpenCTIGraphQLRequest,
+    _permission: Dict[str, Any] = Depends(
+        require_permission(Permission.INTEL_INGEST)
+    ),
     tenant_id: str = Depends(get_current_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Query OpenCTI GraphQL client payload and store STIX entities."""
-    result = await IntelIntegrationService.sync_opencti_graphql(
+    """Ingest OpenCTI data with permission checks."""
+    return await IntelIntegrationService.sync_opencti_graphql(
         graphql_data=payload.graphql_data,
         tenant_id=tenant_id,
-        db=db
+        db=db,
     )
-    return result

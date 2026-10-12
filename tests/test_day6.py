@@ -71,8 +71,10 @@ def test_team_d_ai_guardrails_human_approval():
         "human_approval_token": approval_token,
         "reviewer_email": "lead_analyst@cygrc.local"
     })
-    assert approve_resp.status_code == 200, approve_resp.text
-    assert approve_resp.json()["status"] == "APPROVED"
+    # Approval must fail closed until draft persistence and reviewer
+    # authentication are implemented; a caller-supplied email is not proof.
+    assert approve_resp.status_code == 501, approve_resp.text
+    assert "unavailable" in approve_resp.json()["detail"].lower()
 
 
 if __name__ == "__main__":
