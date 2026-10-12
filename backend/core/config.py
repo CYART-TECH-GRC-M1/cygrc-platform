@@ -37,6 +37,21 @@ class Settings(BaseSettings):
     KEYCLOAK_AUDIENCE: Optional[str] = None
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    # Threat Intelligence Integrations (Phase 6)
+    MISP_URL: Optional[str] = None
+    MISP_API_KEY: Optional[str] = None
+    MISP_VERIFY_SSL: bool = True
+    MISP_TIMEOUT: float = 30.0
+    MISP_MAX_RETRIES: int = 3
+    MISP_BACKOFF_FACTOR: float = 0.5
+
+    OPENCTI_URL: Optional[str] = None
+    OPENCTI_API_KEY: Optional[str] = None
+    OPENCTI_VERIFY_SSL: bool = True
+    OPENCTI_TIMEOUT: float = 30.0
+    OPENCTI_MAX_RETRIES: int = 3
+    OPENCTI_BACKOFF_FACTOR: float = 0.5
+
     def is_production(self) -> bool:
         return self.ENVIRONMENT.strip().lower() == "production"
 

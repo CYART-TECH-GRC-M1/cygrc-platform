@@ -272,6 +272,24 @@ async def evaluate_ueba_anomaly(payload: UEBAEvaluateRequest):
     )
 
 
+class BatchEnrichRequest(BaseModel):
+    alert_ids: List[str]
+
+
+@router.post("/batch/enrich")
+async def enrich_alerts_batch(
+    payload: BatchEnrichRequest,
+    tenant_id: str = Depends(get_current_tenant_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Enriches multiple SOC alerts against tenant threat intel indicators in batch."""
+    return await AlertEnrichmentService.enrich_alerts_batch(
+        alert_ids=payload.alert_ids,
+        tenant_id=tenant_id,
+        db=db,
+    )
+
+
 @router.post("/{alert_id}/enrich")
 async def enrich_alert_with_stix(
     alert_id: str,

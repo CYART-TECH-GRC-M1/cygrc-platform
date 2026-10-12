@@ -1,6 +1,5 @@
-import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, JSON, Text, Integer
+from sqlalchemy import Column, String, DateTime, JSON, Text, Integer, Boolean
 from backend.core.database import Base
 
 
@@ -14,6 +13,11 @@ class StixObject(Base):
     name = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
     pattern = Column(Text, nullable=True)
+    pattern_type = Column(String(50), nullable=True, default="stix")
+    valid_from = Column(DateTime, nullable=True)
+    valid_until = Column(DateTime, nullable=True)
+    revoked = Column(Boolean, nullable=False, default=False)
+    source = Column(String(255), nullable=True, default=None)
     labels = Column(JSON, nullable=True, default=list)
     confidence = Column(Integer, nullable=True, default=50)
     raw_stix = Column(JSON, nullable=True)
