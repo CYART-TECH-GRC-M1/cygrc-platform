@@ -138,9 +138,17 @@ async def get_current_user(
 async def get_current_tenant_id(
     x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
     authorization: Optional[str] = Header(None),
+    bearer_credentials=Depends(bearer_scheme),
 ) -> str:
+    if not authorization and bearer_credentials:
+        authorization = f"Bearer {bearer_credentials.credentials}"
+
     if authorization:
-        user = await get_current_user(authorization=authorization)
+        user = await get_current_user(
+            authorization=authorization,
+            x_tenant_id=x_tenant_id,
+            bearer_credentials=bearer_credentials,
+        )
 
         token_tenant_id = user.get("tenant_id")
 

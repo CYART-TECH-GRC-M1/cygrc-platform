@@ -8,7 +8,13 @@ from backend.models.chain_of_custody import ChainOfCustody
 from backend.models.stix_object import StixObject
 from backend.models.incident_case import IncidentCase
 from backend.models.cve_finding import CVEFinding
-from backend.models.campaign import RedTeamCampaign
+from backend.models.campaign import (
+    RedTeamCampaign,
+    RedTeamExecutionJob,
+    AtomicTestExecution,
+    DetectionVerificationRecord,
+    CampaignReport,
+)
 from backend.models.dfir import DfirChainOfCustody, CustodyAction
 from backend.models.evidence import Evidence
 from backend.models.audit import AuditLog
@@ -36,6 +42,10 @@ try:
         "IncidentCase",
         "CVEFinding",
         "RedTeamCampaign",
+        "RedTeamExecutionJob",
+        "AtomicTestExecution",
+        "DetectionVerificationRecord",
+        "CampaignReport",
         "DfirChainOfCustody",
         "CustodyAction",
         "Evidence",
@@ -61,6 +71,10 @@ except ImportError:
         "IncidentCase",
         "CVEFinding",
         "RedTeamCampaign",
+        "RedTeamExecutionJob",
+        "AtomicTestExecution",
+        "DetectionVerificationRecord",
+        "CampaignReport",
         "DfirChainOfCustody",
         "CustodyAction",
         "Evidence",
