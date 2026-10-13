@@ -78,7 +78,9 @@ class Permission(str, Enum):
     DETECTION_RULE_MANAGE = "detection:rule_manage"
 
     # Playbooks & Automation
+    PLAYBOOK_VIEW = "playbook:view"
     PLAYBOOK_EXECUTE = "playbook:execute"
+    PLAYBOOK_APPROVE = "playbook:approve"
 
     # Tenant & Audit Logs
     TENANT_MANAGE = "tenant:manage"
@@ -119,7 +121,9 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         Permission.INTEL_VIEW,
         Permission.INTEL_INGEST,
         Permission.DETECTION_RULE_MANAGE,
+        Permission.PLAYBOOK_VIEW,
         Permission.PLAYBOOK_EXECUTE,
+        Permission.PLAYBOOK_APPROVE,
         Permission.AUDIT_LOG_VIEW,
     },
 
@@ -137,6 +141,7 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         Permission.CUSTODY_TRANSFER,
         Permission.CUSTODY_VIEW,
         Permission.INTEL_VIEW,
+        Permission.PLAYBOOK_VIEW,
         Permission.PLAYBOOK_EXECUTE,
     },
 
@@ -150,6 +155,7 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         Permission.CASE_CREATE,
         Permission.CUSTODY_VIEW,
         Permission.INTEL_VIEW,
+        Permission.PLAYBOOK_VIEW,
     },
 
     # DFIR Investigator: Forensics collection, custody transfers, evidence exports
@@ -162,6 +168,8 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         Permission.CASE_UPDATE,
         Permission.ALERT_VIEW,
         Permission.INTEL_VIEW,
+        Permission.PLAYBOOK_VIEW,
+        Permission.PLAYBOOK_EXECUTE,
         Permission.AUDIT_LOG_VIEW,
     },
 
@@ -173,6 +181,8 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         Permission.ALERT_VIEW,
         Permission.CASE_VIEW,
         Permission.INTEL_VIEW,
+        Permission.PLAYBOOK_VIEW,
+        Permission.PLAYBOOK_EXECUTE,
     },
 
     # Red Team Engineer: Simulation harness, adversary emulation
@@ -182,6 +192,8 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         Permission.ASSET_VIEW,
         Permission.CASE_VIEW,
         Permission.INTEL_VIEW,
+        Permission.PLAYBOOK_VIEW,
+        Permission.PLAYBOOK_EXECUTE,
     },
 
     # Threat Intelligence Analyst: STIX, TAXII, MISP, OpenCTI feeds
@@ -191,6 +203,7 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         Permission.INTEL_INGEST,
         Permission.ALERT_VIEW,
         Permission.CASE_VIEW,
+        Permission.PLAYBOOK_VIEW,
     },
 
     # Detection Engineer: Sigma rules, SIEM bridge, rules
@@ -200,6 +213,7 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         Permission.ALERT_INGEST,
         Permission.INTEL_VIEW,
         Permission.INTEL_INGEST,
+        Permission.PLAYBOOK_VIEW,
     },
 
     # Read-only Auditor: View-only access plus compliance evidence export
@@ -210,6 +224,7 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         Permission.CUSTODY_VIEW,
         Permission.EVIDENCE_EXPORT,
         Permission.INTEL_VIEW,
+        Permission.PLAYBOOK_VIEW,
         Permission.AUDIT_LOG_VIEW,
     },
     AppRole.AUDITOR.value.lower(): {
@@ -219,6 +234,7 @@ ROLE_PERMISSIONS: Dict[str, Set[Permission]] = {
         Permission.CUSTODY_VIEW,
         Permission.EVIDENCE_EXPORT,
         Permission.INTEL_VIEW,
+        Permission.PLAYBOOK_VIEW,
         Permission.AUDIT_LOG_VIEW,
     },
 

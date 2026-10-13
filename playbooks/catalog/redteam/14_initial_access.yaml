@@ -1,0 +1,121 @@
+id: "pb-redteam-initial-access"
+version: "1.0.0"
+name: "Controlled Initial Access Simulation"
+discipline: "RED_TEAM"
+status: "ACTIVE"
+description: "Simulates controlled adversary initial access techniques (MITRE ATT&CK T1059 / T1190) strictly within an isolated sandbox environment, verifying purple team detection and logging telemetry."
+intended_use: "Execute to test detection coverage and defense posture against initial compromise attempts in an authorized sandbox."
+preconditions:
+  - check: "sandboxed_target_verified"
+    condition: "is_not_empty"
+authorized_target_types:
+  - "sandbox_host"
+  - "test_vm"
+  - "staging_lab"
+required_permissions:
+  - "playbook:execute"
+inputs:
+  sandbox_target:
+    type: "string"
+    required: true
+    description: "Designated sandbox or test VM hostname / IP"
+  technique_id:
+    type: "string"
+    required: false
+    default: "T1059.001"
+    description: "MITRE ATT&CK technique to simulate"
+  campaign_id:
+    type: "string"
+    required: false
+    description: "Associated Red Team campaign ID"
+steps:
+  - id: "step_1_validate_sandbox"
+    name: "Validate Sandboxed Target Isolation"
+    action: "validate_sandboxed_target"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.sandbox_target}"
+    timeout_seconds: 15
+    retry_policy:
+      max_retries: 0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "SANDBOX_VALIDATION_TOKEN"
+    ignore_failure: false
+
+  - id: "step_2_execute_atomic"
+    name: "Execute Approved Sandboxed Atomic Technique"
+    action: "execute_atomic_test_sandboxed"
+    classification: "SENSITIVE_DISRUPTIVE"
+    requires_approval: true
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.sandbox_target}"
+      technique: "${inputs.technique_id}"
+      campaign_id: "${inputs.campaign_id}"
+    timeout_seconds: 60
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 2.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "ATOMIC_EXECUTION_RECORD"
+    ignore_failure: false
+
+  - id: "step_3_verify_purple_team"
+    name: "Verify Purple Team SIEM Detection Correlation"
+    action: "verify_purple_team_detection"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      technique: "${inputs.technique_id}"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "DETECTION_VERIFICATION_RECORD"
+    ignore_failure: false
+
+  - id: "step_4_record_campaign"
+    name: "Record Execution in Campaign Report"
+    action: "record_atomic_execution_job"
+    classification: "REVERSIBLE_LOW_RISK"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      campaign_id: "${inputs.campaign_id}"
+      technique: "${inputs.technique_id}"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "CAMPAIGN_EXECUTION_LOG"
+    ignore_failure: false
+
+success_conditions:
+  - "all_required_steps_succeeded"
+failure_conditions:
+  - "any_critical_step_failed"
+audit_metadata:
+  author: "CyGRC Red Team Operations"
+  created_at: "2026-10-13T00:00:00Z"
+  updated_at: "2026-10-13T00:00:00Z"
+  tags:
+    - "red-team"
+    - "mitre-attack"
+    - "t1059"
+    - "initial-access"
+    - "sandboxed"
+  compliance_mappings:
+    - framework: "MITRE ATT&CK"
+      control: "TA0001: Initial Access"
+  references:
+    - "https://attack.mitre.org/tactics/TA0001/"
+

@@ -1,0 +1,83 @@
+id: "pb-vapt-mobile-stub"
+version: "1.0.0"
+name: "Mobile Assessment Stub (Out-of-Scope)"
+discipline: "VAPT"
+status: "STUB"
+description: "Explicit architectural stub for Mobile Application Security Testing (OWASP MSTG / MASVS). Full mobile binary decompilation, instrumentation (Frida), and dynamic runtime analysis are currently out of scope. This playbook records an auditable disclaimer and explicitly does not perform any mobile scanning."
+intended_use: "Acknowledge mobile assessment request as an explicit stub. Does not perform any mobile scan or claim test execution."
+preconditions:
+  - check: "mobile_target_acknowledged"
+    condition: "is_not_empty"
+authorized_target_types:
+  - "mobile_app_package"
+  - "apk"
+  - "ipa"
+required_permissions:
+  - "playbook:execute"
+inputs:
+  app_package_id:
+    type: "string"
+    required: true
+    description: "Mobile application bundle identifier (e.g., com.cygrc.agent)"
+  platform:
+    type: "string"
+    required: false
+    default: "ANDROID"
+    enum: ["ANDROID", "IOS"]
+steps:
+  - id: "step_1_verify_stub_notice"
+    name: "Verify and Issue Mobile Assessment Stub Notice"
+    action: "verify_mobile_stub_notice"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      package: "${inputs.app_package_id}"
+      platform: "${inputs.platform}"
+    parameters:
+      disclaimer: "Mobile VAPT execution is out of scope in the current release. No mobile binary scanning, static decompilation, or dynamic instrumentation was executed."
+      status_flag: "STUB_OUT_OF_SCOPE"
+    timeout_seconds: 15
+    retry_policy:
+      max_retries: 0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "OUT_OF_SCOPE_NOTICE"
+    ignore_failure: false
+
+  - id: "step_2_record_stub_audit"
+    name: "Record Out-of-Scope Stub Audit Entry"
+    action: "record_evidence_entry"
+    classification: "REVERSIBLE_LOW_RISK"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    parameters:
+      item_description: "Audit entry acknowledging mobile VAPT stub invocation. No scan was performed."
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "STUB_AUDIT_LOG"
+    ignore_failure: false
+
+success_conditions:
+  - "all_required_steps_succeeded"
+failure_conditions:
+  - "any_critical_step_failed"
+audit_metadata:
+  author: "CyGRC VAPT Operations"
+  created_at: "2026-10-13T00:00:00Z"
+  updated_at: "2026-10-13T00:00:00Z"
+  tags:
+    - "mobile"
+    - "vapt"
+    - "stub"
+    - "out-of-scope"
+  compliance_mappings:
+    - framework: "OWASP MASVS"
+      control: "Architecture, Design and Threat Modeling (Stub Notice)"
+  references:
+    - "https://mas.owasp.org/"
+

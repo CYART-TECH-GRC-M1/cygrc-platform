@@ -1,0 +1,122 @@
+id: "pb-dfir-evidence-collection"
+version: "1.0.0"
+name: "Endpoint Artifact & Evidence Collection"
+discipline: "DFIR"
+status: "ACTIVE"
+description: "Dispatches remote Velociraptor artifact collectors to acquire triage packages, calculates SHA-256 integrity hashes, and registers items into the cryptographic Chain of Custody ledger."
+intended_use: "Execute when an endpoint requires immediate forensic acquisition following an alert or incident declaration."
+preconditions:
+  - check: "target_endpoint_provided"
+    condition: "is_not_empty"
+authorized_target_types:
+  - "hostname"
+  - "ip"
+  - "client_id"
+  - "case"
+required_permissions:
+  - "playbook:execute"
+inputs:
+  endpoint_target:
+    type: "string"
+    required: true
+    description: "Target endpoint IP, hostname, or Velociraptor Client ID"
+  artifact_flow_type:
+    type: "string"
+    required: false
+    default: "Windows.KapeFiles.Targets"
+  case_id:
+    type: "string"
+    required: false
+    description: "Incident Case ID to link evidence to"
+steps:
+  - id: "step_1_validate_reachability"
+    name: "Validate Endpoint Reachability & Agent Status"
+    action: "validate_endpoint_reachability"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.endpoint_target}"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: false
+    ignore_failure: false
+
+  - id: "step_2_dispatch_collection"
+    name: "Dispatch Velociraptor Artifact Collection Flow"
+    action: "dispatch_velociraptor_collection"
+    classification: "SENSITIVE_DISRUPTIVE"
+    requires_approval: true
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.endpoint_target}"
+      artifact_name: "${inputs.artifact_flow_type}"
+    timeout_seconds: 180
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 3.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "VELOCIRAPTOR_FLOW_RESULT"
+    ignore_failure: false
+
+  - id: "step_3_calculate_hash"
+    name: "Compute SHA-256 Cryptographic Hash of Artifact"
+    action: "compute_evidence_sha256"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.endpoint_target}"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "SHA256_HASH_DIGEST"
+      require_hash: true
+    ignore_failure: false
+
+  - id: "step_4_commit_custody"
+    name: "Commit Evidence to Cryptographic Chain of Custody Ledger"
+    action: "commit_chain_of_custody_entry"
+    classification: "REVERSIBLE_LOW_RISK"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.endpoint_target}"
+      case_id: "${inputs.case_id}"
+    parameters:
+      action: "COLLECTED"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "CUSTODY_TRANSACTION"
+    ignore_failure: false
+
+success_conditions:
+  - "all_required_steps_succeeded"
+failure_conditions:
+  - "any_critical_step_failed"
+audit_metadata:
+  author: "CyGRC DFIR Operations"
+  created_at: "2026-10-13T00:00:00Z"
+  updated_at: "2026-10-13T00:00:00Z"
+  tags:
+    - "dfir"
+    - "evidence-collection"
+    - "velociraptor"
+    - "chain-of-custody"
+  compliance_mappings:
+    - framework: "ISO 27037"
+      control: "Guidelines for identification, collection, acquisition and preservation of digital evidence"
+  references:
+    - "https://docs.velociraptor.app/"
+

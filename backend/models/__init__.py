@@ -21,6 +21,7 @@ from backend.models.audit import AuditLog
 from backend.models.scan_schedule import ScanSchedule, ScanJob
 from backend.models.vulnerability_finding import VulnerabilityFinding
 from backend.models.ai_approval import AIActionApproval
+from backend.models.playbook import PlaybookExecution, PlaybookApprovalRecord
 
 try:
     from backend.models.role import Role, UserRole
@@ -55,6 +56,8 @@ try:
         "ScanJob",
         "VulnerabilityFinding",
         "AIActionApproval",
+        "PlaybookExecution",
+        "PlaybookApprovalRecord",
     ]
 except ImportError:
     __all__ = [
@@ -85,4 +88,6 @@ except ImportError:
         "ScanJob",
         "VulnerabilityFinding",
         "AIActionApproval",
+        "PlaybookExecution",
+        "PlaybookApprovalRecord",
     ]
