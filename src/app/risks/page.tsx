@@ -15,6 +15,7 @@ import {
 import PageShell from "../../components/ui/PageShell";
 import RiskTable from "../../components/risks/RiskTable";
 import RequirementList from "../../components/risks/RequirementList";
+import { useRouter } from "next/navigation";
 
 const riskStats = [
   {
@@ -69,6 +70,8 @@ const riskTrend = [
 ];
 
 export default function RisksPage() {
+  const router = useRouter();
+
   return (
     <PageShell
       title="Risk Management"
@@ -800,6 +803,7 @@ export default function RisksPage() {
               {/* Add Risk */}
               <motion.button
                 type="button"
+                onClick={() => router.push("/risk-register")}
                 whileHover={{
                   scale: 1.03,
                   boxShadow:

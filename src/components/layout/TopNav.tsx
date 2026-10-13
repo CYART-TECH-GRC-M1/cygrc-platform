@@ -22,8 +22,10 @@ import {
   ExternalLink,
   Bot,
   Trash2,
+  Menu,
 } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
+import { useNavigation } from "@/context/NavigationContext";
 
 interface NotificationItem {
   id: string;
@@ -44,6 +46,7 @@ interface ChatMessage {
 export default function TopNav() {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
+  const { toggleMobileSidebar } = useNavigation();
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
@@ -225,29 +228,40 @@ export default function TopNav() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-orange-500/10 bg-[#090712]/95 px-6 backdrop-blur-xl">
-        {/* Search */}
-        <form onSubmit={handleSearchSubmit} className="flex flex-1 items-center">
-          <div className="flex w-full max-w-md items-center gap-3 rounded-full border border-orange-500/20 bg-[#141126] px-4 py-2 transition focus-within:border-orange-500/50">
-            <Search size={18} className="text-zinc-500 shrink-0" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search risks, controls, assets... (Press Enter)"
-              className="w-full bg-transparent text-sm text-white placeholder:text-zinc-500 outline-none"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="text-zinc-500 hover:text-zinc-300"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-        </form>
+      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-orange-500/10 bg-[#090712]/95 px-4 md:px-6 backdrop-blur-xl">
+        {/* Search & Mobile Menu Button */}
+        <div className="flex flex-1 items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleMobileSidebar}
+            aria-label="Open navigation menu"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-orange-500/20 bg-[#141126] text-zinc-400 hover:text-white md:hidden transition"
+          >
+            <Menu size={18} />
+          </button>
+
+          <form onSubmit={handleSearchSubmit} className="flex flex-1 items-center">
+            <div className="flex w-full max-w-md items-center gap-3 rounded-full border border-orange-500/20 bg-[#141126] px-4 py-2 transition focus-within:border-orange-500/50">
+              <Search size={18} className="text-zinc-500 shrink-0" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search risks, controls, assets... (Press Enter)"
+                className="w-full bg-transparent text-sm text-white placeholder:text-zinc-500 outline-none"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="text-zinc-500 hover:text-zinc-300"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
 
         {/* Right Actions */}
         <div className="ml-6 flex items-center gap-3">

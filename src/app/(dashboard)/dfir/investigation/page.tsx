@@ -76,7 +76,7 @@ export default function DFIRInvestigationPage() {
             <div>
               <h1 className="text-2xl font-bold text-white tracking-tight">DFIR Incident Investigation & Timeline</h1>
               <p className="text-xs text-slate-400">
-                Team C - Forensic Evidence Collector Timeline & Append-Only Chain of Custody Inspector
+                Forensic Evidence Collector Timeline & Append-Only Chain of Custody Inspector
               </p>
             </div>
           </div>

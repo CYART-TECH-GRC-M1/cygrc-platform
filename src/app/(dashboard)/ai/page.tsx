@@ -430,7 +430,7 @@ export default function CyberAIHubPage() {
               <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
                 Cyber AI & Guardrails Hub
                 <span className="rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-semibold text-orange-400 border border-orange-500/20">
-                  Phase 7
+                  Enterprise Engine
                 </span>
               </h1>
               <p className="text-xs text-zinc-400">
@@ -1600,7 +1600,7 @@ export default function CyberAIHubPage() {
               <div>
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
                   <Play size={16} className="text-orange-400" />
-                  Phase 7 AI Evaluation Benchmark
+                  AI Foundation Evaluation Benchmark
                 </h2>
                 <p className="text-xs text-zinc-400">
                   Execute fixed benchmark test suite evaluating factual grounding, injection defense, refusal behavior, and latency.

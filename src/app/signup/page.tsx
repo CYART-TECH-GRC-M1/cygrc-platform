@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   CheckCircle2,
@@ -16,9 +17,68 @@ import {
 } from "lucide-react";
 
 export default function SignUpPage() {
+  const router = useRouter();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [biometricLoading, setBiometricLoading] = useState(false);
+
+  const getStrengthLevel = () => {
+    if (!password) return { count: 0, text: "EMPTY" };
+    if (password.length < 6) return { count: 1, text: "WEAK" };
+    if (password.length < 10) return { count: 2, text: "MEDIUM" };
+    if (password.length < 14) return { count: 3, text: "STRONG" };
+    return { count: 4, text: "ENTERPRISE GRADE" };
+  };
+
+  const strength = getStrengthLevel();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (!fullName.trim()) {
+      setErrorMsg("Full name is required.");
+      return;
+    }
+    if (!email.trim() || !email.includes("@")) {
+      setErrorMsg("A valid enterprise email address is required.");
+      return;
+    }
+    if (password.length < 8) {
+      setErrorMsg("Password must be at least 8 characters long.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMsg("Passwords do not match.");
+      return;
+    }
+    if (!agreed) {
+      setErrorMsg("You must accept the Security Policy & Terms to proceed.");
+      return;
+    }
+
+    setSubmitting(true);
+    setTimeout(() => {
+      setSubmitting(false);
+      router.push(`/verify?email=${encodeURIComponent(email)}`);
+    }, 600);
+  };
+
+  const handleBiometricAuth = () => {
+    setErrorMsg("");
+    setBiometricLoading(true);
+    setTimeout(() => {
+      setBiometricLoading(false);
+      router.push("/dashboard");
+    }, 800);
+  };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050302] text-white">
@@ -276,13 +336,22 @@ export default function SignUpPage() {
                     FORM
                 ================================================== */}
 
-                <form className="space-y-5">
+                {errorMsg && (
+                  <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400 font-mono">
+                    ⚠ {errorMsg}
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-5">
                   {/* Full name */}
                   <CyberInput
                     label="FULL_NAME"
                     placeholder="Enter your full name"
                     icon={<User size={16} />}
                     type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
                   />
 
                   {/* Email */}
@@ -291,6 +360,9 @@ export default function SignUpPage() {
                     placeholder="operator@company.com"
                     icon={<Mail size={16} />}
                     type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                   />
 
                   {/* =================================================
@@ -318,6 +390,9 @@ export default function SignUpPage() {
                             ? "text"
                             : "password"
                         }
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
                         placeholder="Create secure password"
                         className="h-13 w-full rounded-xl border border-slate-800 bg-black/40 pl-11 pr-12 font-mono text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-orange-500/60 focus:bg-orange-500/[0.03] focus:ring-1 focus:ring-orange-500/20"
                       />
@@ -346,17 +421,14 @@ export default function SignUpPage() {
 
                     {/* Strength */}
                     <div className="mt-2 flex gap-1">
-                      <span className="h-1 flex-1 rounded-full bg-orange-500" />
-
-                      <span className="h-1 flex-1 rounded-full bg-orange-500/60" />
-
-                      <span className="h-1 flex-1 rounded-full bg-slate-800" />
-
-                      <span className="h-1 flex-1 rounded-full bg-slate-800" />
+                      <span className={`h-1 flex-1 rounded-full transition-colors ${strength.count >= 1 ? "bg-orange-500" : "bg-slate-800"}`} />
+                      <span className={`h-1 flex-1 rounded-full transition-colors ${strength.count >= 2 ? "bg-orange-500" : "bg-slate-800"}`} />
+                      <span className={`h-1 flex-1 rounded-full transition-colors ${strength.count >= 3 ? "bg-emerald-500" : "bg-slate-800"}`} />
+                      <span className={`h-1 flex-1 rounded-full transition-colors ${strength.count >= 4 ? "bg-emerald-400" : "bg-slate-800"}`} />
                     </div>
 
                     <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.15em] text-slate-600">
-                      PASSWORD_SECURITY_LEVEL: MEDIUM
+                      PASSWORD_SECURITY_LEVEL: {strength.text}
                     </p>
                   </div>
 
@@ -381,6 +453,9 @@ export default function SignUpPage() {
                             ? "text"
                             : "password"
                         }
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
                         placeholder="Repeat secure password"
                         className="h-13 w-full rounded-xl border border-slate-800 bg-black/40 pl-11 pr-12 font-mono text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-emerald-500/60 focus:bg-emerald-500/[0.03] focus:ring-1 focus:ring-emerald-500/20"
                       />
@@ -415,6 +490,8 @@ export default function SignUpPage() {
                   <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-800/70 bg-white/[0.015] p-4 transition hover:border-orange-500/20">
                     <input
                       type="checkbox"
+                      checked={agreed}
+                      onChange={(e) => setAgreed(e.target.checked)}
                       className="mt-0.5 h-4 w-4 accent-orange-500"
                     />
 
@@ -430,12 +507,13 @@ export default function SignUpPage() {
 
                   <button
                     type="submit"
-                    className="group relative flex h-14 w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-gradient-to-r from-orange-500 via-orange-400 to-emerald-500 font-mono text-xs font-bold uppercase tracking-[0.2em] text-black shadow-[0_0_35px_rgba(255,120,0,0.18)] transition duration-300 hover:shadow-[0_0_45px_rgba(255,120,0,0.32)]"
+                    disabled={submitting}
+                    className="group relative flex h-14 w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-gradient-to-r from-orange-500 via-orange-400 to-emerald-500 font-mono text-xs font-bold uppercase tracking-[0.2em] text-black shadow-[0_0_35px_rgba(255,120,0,0.18)] transition duration-300 hover:shadow-[0_0_45px_rgba(255,120,0,0.32)] disabled:opacity-50"
                   >
                     <span className="absolute inset-0 -translate-x-full bg-white/20 transition duration-700 group-hover:translate-x-full" />
 
                     <span className="relative">
-                      Initialize Account
+                      {submitting ? "INITIALIZING IDENTITY..." : "Initialize Account"}
                     </span>
 
                     <ArrowRight
@@ -461,6 +539,8 @@ export default function SignUpPage() {
 
                 <button
                   type="button"
+                  onClick={handleBiometricAuth}
+                  disabled={biometricLoading}
                   className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl border border-slate-800 bg-black/30 px-5 py-3.5 font-mono text-[9px] uppercase tracking-[0.18em] text-slate-500 transition duration-300 hover:border-orange-500/50 hover:bg-orange-500/[0.04] hover:text-orange-400"
                 >
                   {/* Hover glow */}
@@ -471,7 +551,7 @@ export default function SignUpPage() {
                     <Fingerprint
                       size={21}
                       strokeWidth={1.8}
-                      className="text-orange-500 transition duration-300 group-hover:scale-110 group-hover:text-emerald-400"
+                      className={`text-orange-500 transition duration-300 group-hover:scale-110 group-hover:text-emerald-400 ${biometricLoading ? "animate-pulse" : ""}`}
                     />
 
                     {/* Fingerprint pulse */}
@@ -479,7 +559,7 @@ export default function SignUpPage() {
                   </span>
 
                   <span className="relative">
-                    Continue with SSO / Biometrics
+                    {biometricLoading ? "SCANNING BIOMETRICS..." : "Continue with SSO / Biometrics"}
                   </span>
 
                   <ArrowRight
@@ -665,16 +745,23 @@ function CyberInput({
   placeholder,
   icon,
   type,
+  value,
+  onChange,
+  required,
 }: {
   label: string;
   placeholder: string;
   icon: React.ReactNode;
   type: string;
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  required?: boolean;
 }) {
   return (
     <div>
       <label className="mb-2 block font-mono text-[9px] uppercase tracking-[0.2em] text-slate-500">
         {label}
+        {required && <span className="ml-2 text-orange-500/60">REQUIRED</span>}
       </label>
 
       <div className="relative">
@@ -684,6 +771,9 @@ function CyberInput({
 
         <input
           type={type}
+          value={value}
+          onChange={onChange}
+          required={required}
           placeholder={placeholder}
           className="h-13 w-full rounded-xl border border-slate-800 bg-black/40 pl-11 pr-4 font-mono text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-orange-500/60 focus:bg-orange-500/[0.03] focus:ring-1 focus:ring-orange-500/20"
         />

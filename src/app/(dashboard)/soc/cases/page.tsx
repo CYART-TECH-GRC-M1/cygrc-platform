@@ -148,7 +148,7 @@ export default function SOCCasesPage() {
             <div>
               <h1 className="text-2xl font-bold text-white tracking-tight">NIST SP 800-61 Incident Case Management</h1>
               <p className="text-xs text-slate-400">
-                Team A - Incident Response Workflow Engine & NIST Lifecycle Tracking
+                Incident Response Workflow Engine & NIST SP 800-61 Lifecycle Tracking
               </p>
             </div>
           </div>
