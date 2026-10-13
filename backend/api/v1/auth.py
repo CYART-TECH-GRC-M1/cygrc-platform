@@ -38,19 +38,41 @@ _LOCAL_USERS = {
         "user_id": "00000000-0000-0000-0000-000000000001",
         "tenant_id": "00000000-0000-0000-0000-00000000000a",
         "role": "Admin",
+        "first_name": "Admin",
+        "last_name": "User",
         "hashed_password": get_password_hash("adminpass123"),
     },
     "tenant_admin@test.com": {
         "user_id": "00000000-0000-0000-0000-000000000003",
         "tenant_id": "00000000-0000-0000-0000-00000000000a",
         "role": "Tenant Admin",
+        "first_name": "Tenant",
+        "last_name": "Admin",
         "hashed_password": get_password_hash("tenantadminpass123"),
     },
     "employee@test.com": {
         "user_id": "00000000-0000-0000-0000-000000000002",
         "tenant_id": "00000000-0000-0000-0000-00000000000a",
         "role": "Employee",
+        "first_name": "Security",
+        "last_name": "Employee",
         "hashed_password": get_password_hash("employeepass123"),
+    },
+    "soc_lead@test.com": {
+        "user_id": "00000000-0000-0000-0000-000000000004",
+        "tenant_id": "00000000-0000-0000-0000-00000000000a",
+        "role": "SOC Lead",
+        "first_name": "Lead",
+        "last_name": "Responder",
+        "hashed_password": get_password_hash("socleadpass123"),
+    },
+    "analyst@test.com": {
+        "user_id": "00000000-0000-0000-0000-000000000005",
+        "tenant_id": "00000000-0000-0000-0000-00000000000a",
+        "role": "SOC Tier 1",
+        "first_name": "Tier 1",
+        "last_name": "Analyst",
+        "hashed_password": get_password_hash("analystpass123"),
     },
 }
 
@@ -83,6 +105,12 @@ def _try_local_login(payload: LoginRequest) -> Optional[TokenResponse]:
         subject=user["user_id"],
         tenant_id=user["tenant_id"],
         role=user["role"],
+        extra_claims={
+            "email": payload.email,
+            "first_name": user.get("first_name", "Operator"),
+            "last_name": user.get("last_name", "User"),
+            "roles": [user["role"]],
+        },
     )
     return TokenResponse(access_token=token)
 

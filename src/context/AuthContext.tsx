@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function login(email: string, password: string) {
     setLoading(true);
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
     const res = await fetch(`${backendUrl}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const json = await res.json();
     if (!res.ok || !json.access_token) {
       setLoading(false);
-      throw new Error(json?.detail || 'Login failed');
+      throw new Error(json?.detail || json?.error || 'Login failed');
     }
 
     const meRes = await fetch(`${backendUrl}/auth/me`, {
@@ -54,14 +54,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const me = await meRes.json();
     if (!meRes.ok) {
       setLoading(false);
-      throw new Error(me?.detail || 'Unable to load user profile');
+      throw new Error(me?.detail || me?.error || 'Unable to load user profile');
     }
 
     const authenticatedUser = {
       id: me.user_id,
-      email: me.email,
-      name: [me.first_name, me.last_name].filter(Boolean).join(' ') || me.email,
-      role: me.role,
+      email: me.email || email,
+      name: [me.first_name, me.last_name].filter(Boolean).join(' ') || me.email || email,
+      role: me.role || 'Employee',
     };
     setToken(json.access_token);
     setUser(authenticatedUser);

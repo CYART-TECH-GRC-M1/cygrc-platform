@@ -259,6 +259,19 @@ export default function LoginPage() {
   };
 
   /* =========================
+     QUICK FILL DEMO ACCOUNT
+  ========================= */
+
+  const handleQuickFill = (email: string, pass: string) => {
+    setFormData({
+      email,
+      password: pass,
+      rememberMe: true,
+    });
+    setErrors({});
+  };
+
+  /* =========================
      LOGIN
   ========================= */
 
@@ -290,7 +303,9 @@ export default function LoginPage() {
 
       setIsSuccess(true);
 
-      window.location.href = "/dashboard";
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 500);
     } catch (error) {
       console.error(
         "Login error:",
@@ -652,6 +667,59 @@ export default function LoginPage() {
 
                 </div>
 
+                {/* DEMO CREDENTIALS SELECTOR */}
+                <div className="mb-6 border border-orange-500/25 bg-orange-500/5 p-3.5">
+                  <div className="mb-2.5 flex items-center justify-between font-mono text-[9px] tracking-wider">
+                    <span className="flex items-center gap-1.5 font-bold text-orange-400">
+                      <Terminal size={12} />
+                      QUICK-CONNECT TEST ACCOUNTS
+                    </span>
+                    <span className="text-[8px] text-zinc-500">CLICK TO POPULATE</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {[
+                      {
+                        label: "Admin",
+                        email: "admin@test.com",
+                        pass: "adminpass123",
+                        badge: "Full Access",
+                      },
+                      {
+                        label: "SOC Lead",
+                        email: "soc_lead@test.com",
+                        pass: "socleadpass123",
+                        badge: "Approvals",
+                      },
+                      {
+                        label: "Analyst",
+                        email: "analyst@test.com",
+                        pass: "analystpass123",
+                        badge: "Tier 1 SOC",
+                      },
+                      {
+                        label: "Employee",
+                        email: "employee@test.com",
+                        pass: "employeepass123",
+                        badge: "Standard",
+                      },
+                    ].map((acc) => (
+                      <button
+                        key={acc.email}
+                        type="button"
+                        onClick={() => handleQuickFill(acc.email, acc.pass)}
+                        className={`flex flex-col items-start border p-2 text-left font-mono transition ${
+                          formData.email === acc.email
+                            ? "border-orange-500 bg-orange-500/20 text-orange-300 shadow-[0_0_10px_rgba(249,115,22,0.2)]"
+                            : "border-zinc-800 bg-black/50 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"
+                        }`}
+                      >
+                        <span className="text-[10px] font-bold text-white">{acc.label}</span>
+                        <span className="text-[8px] text-zinc-500">{acc.badge}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Error */}
                 <AnimatePresence>
                   {errors.form && (
@@ -700,7 +768,7 @@ export default function LoginPage() {
 
                       <span>
                         AUTHENTICATION SUCCESSFUL.
-                        REDIRECTING...
+                        REDIRECTING TO DASHBOARD...
                       </span>
                     </motion.div>
                   )}
@@ -713,107 +781,89 @@ export default function LoginPage() {
                 >
 
                   {/* EMAIL */}
-                  <div className="relative">
-
-                    <CustomInput
-                      label="IDENTITY / EMAIL"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) =>
-                        updateField(
-                          "email",
-                          e.target.value
-                        )
-                      }
-                      placeholder="operator@company.com"
-                      autoComplete="email"
-                      error={errors.email}
-                      className="
-                        h-12
-                        rounded-none
-                        border-zinc-800
-                        bg-black/60
-                        pl-10
-                        font-mono
-                        text-sm
-                        text-white
-                        placeholder:text-zinc-700
-                        focus:border-orange-500
-                        dark:border-zinc-800
-                        dark:bg-black/60
-                        dark:text-white
-                      "
-                    />
-
-                    <Mail
-                      size={16}
-                      className="pointer-events-none absolute left-3 top-[58px] z-10 -translate-y-1/2 text-zinc-600"
-                    />
-
+                  <div>
+                    <label className="mb-2 block font-mono text-[10px] tracking-wider text-zinc-400">
+                      IDENTITY / EMAIL
+                    </label>
+                    <div className="relative">
+                      <Mail
+                        size={16}
+                        className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-zinc-500"
+                      />
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                          updateField(
+                            "email",
+                            e.target.value
+                          )
+                        }
+                        placeholder="operator@company.com"
+                        autoComplete="email"
+                        className="h-12 w-full rounded-none border border-zinc-800 bg-black/60 pl-11 pr-4 font-mono text-sm text-white placeholder:text-zinc-700 outline-none transition focus:border-orange-500"
+                      />
+                    </div>
+                    {errors.email && (
+                      <p className="mt-1.5 font-mono text-[10px] text-red-400">
+                        {errors.email}
+                      </p>
+                    )}
                   </div>
 
                   {/* PASSWORD */}
-                  <div className="relative">
-
-                    <CustomInput
-                      label="ACCESS KEY / PASSWORD"
-                      type={
-                        showPassword
-                          ? "text"
-                          : "password"
-                      }
-                      value={formData.password}
-                      onChange={(e) =>
-                        updateField(
-                          "password",
-                          e.target.value
-                        )
-                      }
-                      placeholder="Enter access key"
-                      autoComplete="current-password"
-                      error={errors.password}
-                      className="
-                        h-12
-                        rounded-none
-                        border-zinc-800
-                        bg-black/60
-                        pl-10
-                        pr-12
-                        font-mono
-                        text-sm
-                        text-white
-                        placeholder:text-zinc-700
-                        dark:border-zinc-800
-                        dark:bg-black/60
-                        dark:text-white
-                      "
-                    />
-
-                    <Lock
-                      size={16}
-                      className="pointer-events-none absolute left-3 top-[58px] z-10 -translate-y-1/2 text-zinc-600"
-                    />
-
-                    <button
-                      type="button"
-                      aria-label={
-                        showPassword
-                          ? "Hide password"
-                          : "Show password"
-                      }
-                      onClick={() =>
-                        setShowPassword(
-                          !showPassword
-                        )
-                      }
-                      className="absolute right-3 top-[58px] z-10 -translate-y-1/2 p-1 text-zinc-600 transition hover:text-orange-400"
-                    >
-                      {showPassword ? (
-                        <EyeOff size={17} />
-                      ) : (
-                        <Eye size={17} />
-                      )}
-                    </button>
+                  <div>
+                    <label className="mb-2 block font-mono text-[10px] tracking-wider text-zinc-400">
+                      ACCESS KEY / PASSWORD
+                    </label>
+                    <div className="relative">
+                      <Lock
+                        size={16}
+                        className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-zinc-500"
+                      />
+                      <input
+                        type={
+                          showPassword
+                            ? "text"
+                            : "password"
+                        }
+                        value={formData.password}
+                        onChange={(e) =>
+                          updateField(
+                            "password",
+                            e.target.value
+                          )
+                        }
+                        placeholder="Enter access key"
+                        autoComplete="current-password"
+                        className="h-12 w-full rounded-none border border-zinc-800 bg-black/60 pl-11 pr-11 font-mono text-sm text-white placeholder:text-zinc-700 outline-none transition focus:border-orange-500"
+                      />
+                      <button
+                        type="button"
+                        aria-label={
+                          showPassword
+                            ? "Hide password"
+                            : "Show password"
+                        }
+                        onClick={() =>
+                          setShowPassword(
+                            !showPassword
+                          )
+                        }
+                        className="absolute right-3.5 top-1/2 z-10 -translate-y-1/2 p-1 text-zinc-500 transition hover:text-orange-400"
+                      >
+                        {showPassword ? (
+                          <EyeOff size={16} />
+                        ) : (
+                          <Eye size={16} />
+                        )}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="mt-1.5 font-mono text-[10px] text-red-400">
+                        {errors.password}
+                      </p>
+                    )}
 
                     {/* Strength */}
                     <AnimatePresence>
