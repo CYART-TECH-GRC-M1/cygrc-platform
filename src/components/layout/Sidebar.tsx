@@ -17,6 +17,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 
 const navItems = [
@@ -67,6 +68,11 @@ const navItems = [
         label: "Reports",
         icon: FileBarChart,
         path: "/reports",
+      },
+      {
+        label: "Cyber AI Hub",
+        icon: Sparkles,
+        path: "/ai",
       },
     ],
   },

@@ -17,7 +17,7 @@ from backend.api.v1.cve import router as cve_router
 from backend.api.v1.intel_feeds import router as intel_feeds_router
 from backend.api.v1.red_team import router as red_team_router
 from backend.api.v1.mitre import router as mitre_router
-from backend.api.v1.ai_copilot import router as ai_copilot_router
+from backend.ai.routes import router as ai_router
 from backend.api.v1.jira import router as jira_router
 from backend.api.v1.campaigns import router as campaigns_router
 from backend.api.v1.dfir import router as dfir_router
@@ -52,7 +52,7 @@ api_router.include_router(cve_router, prefix="/vapt/cve", tags=["VAPT Scanner - 
 api_router.include_router(intel_feeds_router, prefix="/intel", tags=["Threat Intel - MISP & OpenCTI"])
 api_router.include_router(red_team_router, prefix="/redteam", tags=["Red Team - Atomic Red Team"])
 api_router.include_router(mitre_router, prefix="/mitre", tags=["MITRE ATT&CK Matrix"])
-api_router.include_router(ai_copilot_router, prefix="/ai", tags=["Cyber AI SOC Copilot"])
+api_router.include_router(ai_router, prefix="/ai", tags=["Cyber AI & Guardrails"])
 api_router.include_router(jira_router, prefix="/vapt/jira", tags=["VAPT Scanner - Jira Push"])
 api_router.include_router(campaigns_router, prefix="/campaigns", tags=["Red Team - Campaigns"])
 api_router.include_router(dfir_router, prefix="/dfir", tags=["DFIR - Evidence Chain of Custody"])

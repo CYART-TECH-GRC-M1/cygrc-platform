@@ -20,6 +20,7 @@ from backend.models.evidence import Evidence
 from backend.models.audit import AuditLog
 from backend.models.scan_schedule import ScanSchedule, ScanJob
 from backend.models.vulnerability_finding import VulnerabilityFinding
+from backend.models.ai_approval import AIActionApproval
 
 try:
     from backend.models.role import Role, UserRole
@@ -53,6 +54,7 @@ try:
         "ScanSchedule",
         "ScanJob",
         "VulnerabilityFinding",
+        "AIActionApproval",
     ]
 except ImportError:
     __all__ = [
@@ -82,4 +84,5 @@ except ImportError:
         "ScanSchedule",
         "ScanJob",
         "VulnerabilityFinding",
+        "AIActionApproval",
     ]

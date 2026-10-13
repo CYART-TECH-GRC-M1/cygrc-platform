@@ -52,6 +52,31 @@ class Settings(BaseSettings):
     OPENCTI_MAX_RETRIES: int = 3
     OPENCTI_BACKOFF_FACTOR: float = 0.5
 
+    # Cyber AI & Guardrails (Phase 7)
+    AI_PROVIDER: Optional[str] = "mock"  # "openai", "azure", "anthropic", "mock", or None
+    AI_MODEL: str = "gpt-4o"
+    AI_API_KEY: Optional[str] = None
+    AI_API_BASE: Optional[str] = None
+    AI_TEMPERATURE: float = 0.0
+    AI_MAX_TOKENS: int = 2048
+    AI_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    OPENAI_API_KEY: Optional[str] = None
+
+    @property
+    def is_ai_provider_available(self) -> bool:
+        """Determines if a valid AI model provider is configured and available."""
+        if not self.AI_PROVIDER:
+            return False
+        provider = str(self.AI_PROVIDER).strip().lower()
+        if provider in {"", "none", "disabled", "false"}:
+            return False
+        if provider == "mock":
+            return True
+        if provider in {"openai", "azure", "anthropic"}:
+            key = self.AI_API_KEY or self.OPENAI_API_KEY
+            return bool(key and key.strip())
+        return True
+
     def is_production(self) -> bool:
         return self.ENVIRONMENT.strip().lower() == "production"
 

@@ -139,7 +139,7 @@ export default function TopNav() {
   };
 
   // AI Chat handler
-  const handleSendAiMessage = (promptText?: string) => {
+  const handleSendAiMessage = async (promptText?: string) => {
     const textToSend = promptText || aiInput;
     if (!textToSend.trim() || aiThinking) return;
 
@@ -154,6 +154,44 @@ export default function TopNav() {
     if (!promptText) setAiInput("");
     setAiThinking(true);
 
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("cygrc_token") : null;
+      const res = await fetch("/api/v1/ai/soc-copilot", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          "X-Tenant-ID": "00000000-0000-0000-0000-00000000000a",
+        },
+        body: JSON.stringify({ question: textToSend.trim() }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        let reply = data.answer || "Analysis complete.";
+        if (data.supporting_sources && data.supporting_sources.length > 0) {
+          reply += `\n\n📌 Supporting Sources: ${data.supporting_sources.join(", ")}`;
+        }
+        if (data.confidence_score) {
+          reply += ` (Grounding Confidence: ${Math.round(data.confidence_score * 100)}%)`;
+        }
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: String(Date.now() + 1),
+            sender: "ai",
+            text: reply,
+            time: "Just now",
+          },
+        ]);
+        setAiThinking(false);
+        return;
+      }
+    } catch {
+      // Backend unavailable or network error - fallback to local posture analysis
+    }
+
+    // Fallback response if offline / unauthorized
     setTimeout(() => {
       let reply = "I analyzed the CyGRC posture repository. ";
       const lower = textToSend.toLowerCase();
@@ -169,7 +207,7 @@ export default function TopNav() {
           "You have 19 active connected services out of 24, with 98.7% data sync health. AWS has 1 sync alert pending attention.";
       } else {
         reply +=
-          "All security controls are operating normally across active frameworks (ISO 27001, SOC 2, NIST CSF). Would you like to generate an executive report or check open findings?";
+          "All security controls are operating normally across active frameworks (ISO 27001, SOC 2, NIST CSF). For deep capability inspection, visit the full Cyber AI Hub.";
       }
 
       setChatMessages((prev) => [
@@ -182,7 +220,7 @@ export default function TopNav() {
         },
       ]);
       setAiThinking(false);
-    }, 700);
+    }, 600);
   };
 
   return (
@@ -454,13 +492,22 @@ export default function TopNav() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setAiDrawerOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white transition"
-              >
-                <X size={18} />
-              </button>
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/ai"
+                  onClick={() => setAiDrawerOpen(false)}
+                  className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-[11px] font-semibold text-orange-400 hover:bg-orange-500/20 transition flex items-center gap-1"
+                >
+                  Full Hub <ExternalLink size={12} />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setAiDrawerOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             {/* Chat History */}

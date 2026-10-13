@@ -7,11 +7,27 @@ from backend.core.database import AsyncSessionLocal
 from backend.api.router import api_router
 import backend.models  # noqa: F401 — register ORM models (including TenantControlMapping)
 
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from backend.core.database import engine, Base
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as e:
+        import logging
+        logging.getLogger("cygrc").warning(f"Database schema auto-sync notice: {e}")
+    yield
+
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Governance, Risk and Compliance Platform API",
     version="1.0.0",
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan,
 )
 
 # Set up CORS middleware
