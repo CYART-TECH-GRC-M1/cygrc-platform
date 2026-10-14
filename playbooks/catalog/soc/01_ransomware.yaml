@@ -1,0 +1,139 @@
+id: "pb-soc-ransomware"
+version: "1.0.0"
+name: "Ransomware Containment & Triage"
+discipline: "SOC"
+status: "ACTIVE"
+description: "Rapid containment of hosts infected with ransomware, STIX threat intelligence enrichment, host isolation, and incident case escalation under NIST SP 800-61."
+intended_use: "Execute when high-severity or critical ransomware behavior is detected on tenant endpoints."
+preconditions:
+  - check: "target_provided"
+    condition: "is_not_empty"
+authorized_target_types:
+  - "ip"
+  - "hostname"
+  - "alert"
+  - "case"
+required_permissions:
+  - "playbook:execute"
+inputs:
+  target_ip:
+    type: "string"
+    required: true
+    description: "IP address of the infected endpoint"
+    pattern: "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$"
+  case_id:
+    type: "string"
+    required: false
+    description: "Existing NIST case ID to link or update"
+  file_hash:
+    type: "string"
+    required: false
+    description: "Observed SHA-256 hash of malicious ransom binary"
+steps:
+  - id: "step_1_threat_intel"
+    name: "Enrich IOCs via STIX Threat Intelligence"
+    action: "threat_intel_lookup"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      indicator: "${inputs.target_ip}"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "INTEL_REPORT"
+    ignore_failure: false
+
+  - id: "step_2_asset_lookup"
+    name: "Evaluate Asset Criticality and Exposure"
+    action: "asset_criticality_lookup"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.target_ip}"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: false
+    ignore_failure: false
+
+  - id: "step_3_quarantine"
+    name: "Quarantine Infected Host from Network"
+    action: "quarantine_host_simulation"
+    classification: "SENSITIVE_DISRUPTIVE"
+    requires_approval: true
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.target_ip}"
+    timeout_seconds: 60
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 2.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "HOST_ISOLATION_PROOF"
+    ignore_failure: false
+
+  - id: "step_4_case_management"
+    name: "Escalate Incident Case to Contained Phase"
+    action: "transition_case_status"
+    classification: "REVERSIBLE_LOW_RISK"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      case_id: "${inputs.case_id}"
+      target_status: "CONTAINED"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "CASE_STATE"
+    ignore_failure: false
+
+  - id: "step_5_jira_ticket"
+    name: "Create Urgent Remediation Ticket in Jira"
+    action: "create_jira_ticket"
+    classification: "REVERSIBLE_LOW_RISK"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    parameters:
+      project_key: "CYGRC"
+      priority: "CRITICAL"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "JIRA_TICKET"
+    ignore_failure: false
+
+success_conditions:
+  - "all_required_steps_succeeded"
+failure_conditions:
+  - "any_critical_step_failed"
+audit_metadata:
+  author: "CyGRC SecOps Architecture"
+  created_at: "2026-10-13T00:00:00Z"
+  updated_at: "2026-10-13T00:00:00Z"
+  tags:
+    - "ransomware"
+    - "containment"
+    - "soc"
+    - "nist-800-61"
+  compliance_mappings:
+    - framework: "NIST SP 800-61"
+      control: "IR-4"
+    - framework: "ISO 27001"
+      control: "A.16.1.5"
+  references:
+    - "https://csrc.nist.gov/publications/detail/sp/800-61/rev-2/final"
+

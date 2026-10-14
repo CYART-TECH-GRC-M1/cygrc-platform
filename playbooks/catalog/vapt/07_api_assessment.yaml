@@ -1,0 +1,95 @@
+id: "pb-vapt-api-assessment"
+version: "1.0.0"
+name: "REST & GraphQL API Assessment"
+discipline: "VAPT"
+status: "ACTIVE"
+description: "API endpoint discovery, schema validation, authentication bypass fuzzing, and security posture reporting against OWASP API Security Top 10."
+intended_use: "Execute to conduct automated API security tests against authorized staging or test endpoints."
+preconditions:
+  - check: "api_url_provided"
+    condition: "is_not_empty"
+authorized_target_types:
+  - "url"
+  - "api_endpoint"
+  - "hostname"
+required_permissions:
+  - "playbook:execute"
+inputs:
+  api_endpoint_url:
+    type: "string"
+    required: true
+    description: "Base URL or OpenAPI spec URL of the API"
+  auth_type:
+    type: "string"
+    required: false
+    default: "BEARER"
+steps:
+  - id: "step_1_validate_scope"
+    name: "Validate In-Scope API Scope"
+    action: "validate_target_scope"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.api_endpoint_url}"
+    timeout_seconds: 15
+    retry_policy:
+      max_retries: 0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "API_SCOPE_TOKEN"
+    ignore_failure: false
+
+  - id: "step_2_api_fuzz"
+    name: "Dispatch API Security Fuzzing Assessment"
+    action: "dispatch_api_fuzz_scan"
+    classification: "SENSITIVE_DISRUPTIVE"
+    requires_approval: true
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.api_endpoint_url}"
+    timeout_seconds: 180
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 3.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "API_FUZZ_LOG"
+    ignore_failure: false
+
+  - id: "step_3_export_report"
+    name: "Export API Security Assessment Report"
+    action: "export_assessment_report"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.api_endpoint_url}"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "API_SECURITY_REPORT"
+    ignore_failure: false
+
+success_conditions:
+  - "all_required_steps_succeeded"
+failure_conditions:
+  - "any_critical_step_failed"
+audit_metadata:
+  author: "CyGRC VAPT Operations"
+  created_at: "2026-10-13T00:00:00Z"
+  updated_at: "2026-10-13T00:00:00Z"
+  tags:
+    - "vapt"
+    - "api"
+    - "graphql"
+    - "owasp-api-top-10"
+  compliance_mappings:
+    - framework: "OWASP API Security Top 10"
+      control: "API1:2023"
+  references:
+    - "https://owasp.org/www-project-api-security/"
+

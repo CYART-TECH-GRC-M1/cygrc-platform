@@ -1,0 +1,132 @@
+id: "pb-vapt-web-assessment"
+version: "1.0.0"
+name: "Automated Web Application Assessment"
+discipline: "VAPT"
+status: "ACTIVE"
+description: "Target scope authorization check, OWASP ZAP spider and active scan execution, CVE/OWASP vulnerability prioritization, Jira issue sync, and GRC evidence ingestion."
+intended_use: "Execute to conduct automated web application vulnerability scans on authorized in-scope domains or URLs."
+preconditions:
+  - check: "target_url_provided"
+    condition: "is_not_empty"
+authorized_target_types:
+  - "url"
+  - "hostname"
+  - "web_app"
+required_permissions:
+  - "playbook:execute"
+inputs:
+  target_url:
+    type: "string"
+    required: true
+    description: "URL of target web application to assess"
+  scan_depth:
+    type: "string"
+    required: false
+    default: "STANDARD"
+    enum: ["QUICK", "STANDARD", "DEEP"]
+steps:
+  - id: "step_1_validate_scope"
+    name: "Validate In-Scope Target Authorization"
+    action: "validate_target_scope"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.target_url}"
+    timeout_seconds: 15
+    retry_policy:
+      max_retries: 0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "SCOPE_VALIDATION_TOKEN"
+    ignore_failure: false
+
+  - id: "step_2_zap_scan"
+    name: "Dispatch OWASP ZAP Web Application Scan"
+    action: "dispatch_web_zap_scan"
+    classification: "SENSITIVE_DISRUPTIVE"
+    requires_approval: true
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.target_url}"
+    timeout_seconds: 300
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 5.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "ZAP_ALERTS_REPORT"
+    ignore_failure: false
+
+  - id: "step_3_prioritize_findings"
+    name: "Prioritize Vulnerabilities via PRD Risk Engine"
+    action: "prioritize_vulnerabilities"
+    classification: "REVERSIBLE_LOW_RISK"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.target_url}"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "PRIORITIZATION_MATRIX"
+    ignore_failure: false
+
+  - id: "step_4_push_jira"
+    name: "Push Prioritized Findings to Jira"
+    action: "push_findings_to_jira"
+    classification: "REVERSIBLE_LOW_RISK"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    parameters:
+      project_key: "CYGRC"
+    timeout_seconds: 45
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 2.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "JIRA_REMEDIATION_TICKETS"
+    ignore_failure: false
+
+  - id: "step_5_feed_grc"
+    name: "Feed Vulnerability Findings to Module 1 GRC Evidence"
+    action: "feed_vapt_evidence_to_grc"
+    classification: "REVERSIBLE_LOW_RISK"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    parameters:
+      control_code: "A.12.6.1"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "GRC_CONTROL_EVIDENCE"
+    ignore_failure: false
+
+success_conditions:
+  - "all_required_steps_succeeded"
+failure_conditions:
+  - "any_critical_step_failed"
+audit_metadata:
+  author: "CyGRC VAPT Operations"
+  created_at: "2026-10-13T00:00:00Z"
+  updated_at: "2026-10-13T00:00:00Z"
+  tags:
+    - "vapt"
+    - "owasp-top-10"
+    - "zap"
+    - "web"
+  compliance_mappings:
+    - framework: "ISO 27001"
+      control: "A.12.6.1"
+    - framework: "PCI DSS"
+      control: "6.5"
+  references:
+    - "https://owasp.org/www-project-top-ten/"
+

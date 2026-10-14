@@ -1,0 +1,95 @@
+id: "pb-dfir-breach-investigation"
+version: "1.0.0"
+name: "Data Breach Forensic Audit & Ledger Verification"
+discipline: "DFIR"
+status: "ACTIVE"
+description: "Comprehensive cryptographic verification of the Chain of Custody ledger, deep-log retention audit, and generation of a tamper-evident audit export report."
+intended_use: "Execute when certifying digital evidence integrity for formal regulatory reporting or litigation readiness."
+preconditions:
+  - check: "tenant_context_verified"
+    condition: "is_not_empty"
+authorized_target_types:
+  - "case"
+  - "tenant"
+required_permissions:
+  - "playbook:execute"
+inputs:
+  case_id:
+    type: "string"
+    required: false
+    description: "Specific incident case ID to audit, or leave empty for full tenant audit"
+  certification_officer:
+    type: "string"
+    required: false
+    default: "DFIR Lead Investigator"
+steps:
+  - id: "step_1_query_ledger"
+    name: "Query All Tenant Custody Ledger Entries"
+    action: "query_custody_timeline"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      case_id: "${inputs.case_id}"
+    timeout_seconds: 45
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "LEDGER_DUMP"
+    ignore_failure: false
+
+  - id: "step_2_verify_integrity"
+    name: "Verify Cryptographic SHA-256 Ledger Integrity Seal"
+    action: "verify_custody_integrity_seal"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "INTEGRITY_SEAL_CERTIFICATE"
+    ignore_failure: false
+
+  - id: "step_3_export_court_package"
+    name: "Produce Court-Admissible Forensic Audit Package"
+    action: "export_forensic_audit_package"
+    classification: "SENSITIVE_DISRUPTIVE"
+    requires_approval: true
+    approval_role: "Tenant Admin"
+    input_mapping:
+      case_id: "${inputs.case_id}"
+    timeout_seconds: 90
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 2.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "LEGAL_AUDIT_PACKAGE"
+    ignore_failure: false
+
+success_conditions:
+  - "all_required_steps_succeeded"
+failure_conditions:
+  - "any_critical_step_failed"
+audit_metadata:
+  author: "CyGRC DFIR Operations"
+  created_at: "2026-10-13T00:00:00Z"
+  updated_at: "2026-10-13T00:00:00Z"
+  tags:
+    - "dfir"
+    - "breach-investigation"
+    - "audit"
+    - "chain-of-custody"
+  compliance_mappings:
+    - framework: "ISO 27037"
+      control: "Preservation of Digital Evidence"
+    - framework: "NIST SP 800-86"
+      control: "Forensic Integration"
+  references:
+    - "https://www.iso.org/standard/53540.html"
+

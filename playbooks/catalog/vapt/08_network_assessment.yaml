@@ -1,0 +1,112 @@
+id: "pb-vapt-network-assessment"
+version: "1.0.0"
+name: "Internal & Perimeter Network Vulnerability Scan"
+discipline: "VAPT"
+status: "ACTIVE"
+description: "Target scope authorization verification, controlled Nmap service discovery, OpenVAS CVE vulnerability scanning, and risk prioritization."
+intended_use: "Execute scheduled or ad-hoc vulnerability scans across authorized corporate subnets or perimeter IPs."
+preconditions:
+  - check: "target_ip_or_cidr_provided"
+    condition: "is_not_empty"
+authorized_target_types:
+  - "ip"
+  - "cidr"
+  - "hostname"
+required_permissions:
+  - "playbook:execute"
+inputs:
+  target_network:
+    type: "string"
+    required: true
+    description: "IP address or CIDR range to scan"
+  scan_intensity:
+    type: "string"
+    required: false
+    default: "T4"
+steps:
+  - id: "step_1_validate_network_scope"
+    name: "Validate Network Scope and Reject Disallowed Ranges"
+    action: "validate_target_scope"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.target_network}"
+    timeout_seconds: 15
+    retry_policy:
+      max_retries: 0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "NETWORK_SCOPE_TOKEN"
+    ignore_failure: false
+
+  - id: "step_2_nmap_discovery"
+    name: "Dispatch Nmap Network Service Discovery"
+    action: "dispatch_nmap_port_discovery"
+    classification: "SENSITIVE_DISRUPTIVE"
+    requires_approval: true
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.target_network}"
+    timeout_seconds: 180
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 2.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "NMAP_XML_OUTPUT"
+    ignore_failure: false
+
+  - id: "step_3_openvas_scan"
+    name: "Dispatch OpenVAS Vulnerability Scan"
+    action: "dispatch_openvas_cve_scan"
+    classification: "SENSITIVE_DISRUPTIVE"
+    requires_approval: true
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.target_network}"
+    timeout_seconds: 300
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 5.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "OPENVAS_FINDINGS_JSON"
+    ignore_failure: false
+
+  - id: "step_4_prioritize_findings"
+    name: "Calculate Prioritized CVE Scores with CISA KEV Feed"
+    action: "prioritize_vulnerabilities"
+    classification: "REVERSIBLE_LOW_RISK"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.target_network}"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "CVE_PRIORITY_SCORES"
+    ignore_failure: false
+
+success_conditions:
+  - "all_required_steps_succeeded"
+failure_conditions:
+  - "any_critical_step_failed"
+audit_metadata:
+  author: "CyGRC VAPT Operations"
+  created_at: "2026-10-13T00:00:00Z"
+  updated_at: "2026-10-13T00:00:00Z"
+  tags:
+    - "vapt"
+    - "network"
+    - "nmap"
+    - "openvas"
+  compliance_mappings:
+    - framework: "NIST SP 800-115"
+      control: "Technical Guide to Information Security Testing"
+  references:
+    - "https://nvd.nist.gov"
+

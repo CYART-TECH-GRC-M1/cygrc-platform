@@ -1,0 +1,112 @@
+id: "pb-dfir-incident-investigation"
+version: "1.0.0"
+name: "Multi-Source Incident Forensic Investigation"
+discipline: "DFIR"
+status: "ACTIVE"
+description: "Cross-correlate endpoint artifacts, SIEM telemetry, memory forensics, and custody timeline events to reconstruct incident attack chronology."
+intended_use: "Execute during DFIR deep-dive investigations to synthesize forensic proof across disparate log streams."
+preconditions:
+  - check: "case_id_or_host_provided"
+    condition: "is_not_empty"
+authorized_target_types:
+  - "case"
+  - "hostname"
+  - "ip"
+required_permissions:
+  - "playbook:execute"
+inputs:
+  case_id:
+    type: "string"
+    required: true
+    description: "Incident Case ID under investigation"
+  endpoint_target:
+    type: "string"
+    required: false
+    description: "Primary suspected pivot endpoint"
+steps:
+  - id: "step_1_query_timeline"
+    name: "Query Incident Chain of Custody Timeline"
+    action: "query_custody_timeline"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      case_id: "${inputs.case_id}"
+    timeout_seconds: 30
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "TIMELINE_EXTRACT"
+    ignore_failure: false
+
+  - id: "step_2_correlate_siem"
+    name: "Correlate Wazuh SIEM Host Telemetry"
+    action: "correlate_tenant_alerts"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      case_id: "${inputs.case_id}"
+    timeout_seconds: 45
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "SIEM_CORRELATION_MATRIX"
+    ignore_failure: false
+
+  - id: "step_3_memory_analysis"
+    name: "Execute Volatile Memory Dump Analysis"
+    action: "perform_memory_dump_analysis"
+    classification: "SENSITIVE_DISRUPTIVE"
+    requires_approval: true
+    approval_role: "SOC Lead"
+    input_mapping:
+      target: "${inputs.endpoint_target}"
+    timeout_seconds: 180
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 3.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "MEMORY_FORENSIC_SUMMARY"
+    ignore_failure: false
+
+  - id: "step_4_export_package"
+    name: "Export Cryptographic Forensic Audit Package"
+    action: "export_forensic_audit_package"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      case_id: "${inputs.case_id}"
+    timeout_seconds: 45
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "AUDIT_PACKAGE_RECEIPT"
+    ignore_failure: false
+
+success_conditions:
+  - "all_required_steps_succeeded"
+failure_conditions:
+  - "any_critical_step_failed"
+audit_metadata:
+  author: "CyGRC DFIR Operations"
+  created_at: "2026-10-13T00:00:00Z"
+  updated_at: "2026-10-13T00:00:00Z"
+  tags:
+    - "dfir"
+    - "incident-investigation"
+    - "memory-forensics"
+  compliance_mappings:
+    - framework: "NIST SP 800-86"
+      control: "Guide to Integrating Forensic Techniques into Incident Response"
+  references:
+    - "https://csrc.nist.gov/publications/detail/sp/800-86/final"
+

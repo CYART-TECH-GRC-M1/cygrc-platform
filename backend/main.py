@@ -1,21 +1,88 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, status
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from backend.core.config import settings
+from backend.core.database import AsyncSessionLocal
+from backend.api.router import api_router
+import backend.models  # noqa: F401 — register ORM models (including TenantControlMapping)
+
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from backend.core.database import engine, Base
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as e:
+        import logging
+        logging.getLogger("cygrc").warning(f"Database schema auto-sync notice: {e}")
+    yield
+
 
 app = FastAPI(
-    title="CyGRC Platform API",
-    description="Governance, Risk and Compliance Platform",
-    version="1.0.0"
+    title=settings.PROJECT_NAME,
+    description="Governance, Risk and Compliance Platform API",
+    version="1.0.0",
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan,
 )
+
+# Set up CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(api_router)
 
 
 @app.get("/")
 def home():
     return {
-        "message": "Welcome to CyGRC Platform 🚀"
+        "message": "Welcome to CyGRC Platform API 🚀",
+        "docs": "/docs"
+    }
+
+
+@app.get("/health/live")
+def liveness():
+    return {
+        "status": "UP",
+        "environment": settings.ENVIRONMENT,
     }
 
 
 @app.get("/health")
-def health():
-    return {
-        "status": "Healthy"
+async def health():
+    db_status = "UNKNOWN"
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+        db_status = "UP"
+    except Exception as e:
+        db_status = f"DOWN: {str(e)[:100]}"
+
+    is_healthy = db_status == "UP"
+    resp = {
+        "status": "Healthy" if is_healthy else "Degraded",
+        "app": "UP",
+        "environment": settings.ENVIRONMENT,
+        "dependencies": {
+            "database": db_status,
+            "keycloak": "CONFIGURED" if settings.KEYCLOAK_ENABLED else "DISABLED",
+        }
     }
+    if not is_healthy:
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=resp)
+    return resp
