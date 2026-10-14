@@ -1,6 +1,8 @@
+
 import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -8,10 +10,11 @@ from backend.models.evidence import Evidence
 from backend.models.control import Control
 from backend.models.risk import Risk
 from backend.models.tenant import TenantStatus
+from backend.models.tenant_control import TenantControlMapping
 
 
 class GRCEvidenceBridgeService:
-    """Feeds VAPT vulnerability scan findings directly into Module 1 GRC Compliance Control Engine & Risk Register."""
+    """Feeds VAPT findings into the GRC Evidence and Risk Register."""
 
     @staticmethod
     def _to_uuid(val: Any) -> uuid.UUID:
@@ -29,9 +32,9 @@ class GRCEvidenceBridgeService:
         cvss_score: float,
         affected_product: str,
         tenant_id: str,
-        control_code: str = "A.12.6.1"  # Technical Vulnerability Management
+        control_code: str = "A.12.6.1",
     ) -> Dict[str, Any]:
-        """Stateless backward-compatible signature generating evidence payload."""
+        """Stateless backward-compatible evidence payload."""
         evidence_id = f"EVID-GRC-{uuid.uuid4().hex[:8].upper()}"
 
         evidence_payload = {
@@ -43,14 +46,21 @@ class GRCEvidenceBridgeService:
             "cvss_score": cvss_score,
             "affected_product": affected_product,
             "status": "EVIDENCE_ATTACHED",
-            "compliance_signal": "NON_COMPLIANT" if cvss_score >= 7.0 else "COMPLIANT_WITH_RESERVATIONS",
-            "timestamp": datetime.utcnow().isoformat()
+            "compliance_signal": (
+                "NON_COMPLIANT"
+                if cvss_score >= 7.0
+                else "COMPLIANT_WITH_RESERVATIONS"
+            ),
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
         return {
             "status": "SUCCESS",
-            "message": f"VAPT scan finding {cve_id} successfully mapped to GRC Control {control_code} as automated compliance evidence.",
-            "evidence": evidence_payload
+            "message": (
+                f"VAPT scan finding {cve_id} mapped to GRC Control "
+                f"{control_code} as automated compliance evidence."
+            ),
+            "evidence": evidence_payload,
         }
 
     @classmethod
@@ -66,89 +76,120 @@ class GRCEvidenceBridgeService:
         create_risk_entry: bool = True,
     ) -> Dict[str, Any]:
         """
-        Durable Phase 9 implementation:
-        1. Resolves Control in DB (e.g. A.12.6.1 Technical Vulnerability Management).
-        2. Ingests Evidence record for the control.
-        3. If cvss_score >= 7.0 (High/Critical) and create_risk_entry=True, automatically
-           registers an item in the Risk Register mapped to the control.
+        Persist VAPT evidence and optionally create a risk entry.
+
+        The control must be actively mapped to the specified tenant.
+        High/Critical findings (CVSS >= 7.0) create a risk entry when
+        create_risk_entry is True.
         """
         parsed_tenant = cls._to_uuid(tenant_id)
         parsed_uploader = cls._to_uuid(uploaded_by or tenant_id)
 
-        # Lookup control
-        stmt = select(Control).where(Control.control_code == control_code)
+        # Find the control only if it is actively mapped to this tenant.
+        stmt = (
+            select(Control)
+            .join(
+                TenantControlMapping,
+                TenantControlMapping.control_id == Control.control_id,
+            )
+            .where(
+                Control.control_code == control_code,
+                TenantControlMapping.tenant_id == parsed_tenant,
+                TenantControlMapping.status == "ACTIVE",
+            )
+        )
+
         result = await db.execute(stmt)
         ctrl = result.scalars().first()
 
+        # Do not report success if the tenant has no active control mapping.
+        if ctrl is None:
+            return {
+                "status": "ERROR",
+                "message": (
+                    f"Control {control_code} is not mapped to tenant "
+                    f"{parsed_tenant} or its mapping is inactive."
+                ),
+                "evidence": None,
+            }
+
         evidence_uuid = uuid.uuid4()
-        compliance_signal = "NON_COMPLIANT" if cvss_score >= 7.0 else "COMPLIANT_WITH_RESERVATIONS"
-        persisted_evidence = False
+        compliance_signal = (
+            "NON_COMPLIANT"
+            if cvss_score >= 7.0
+            else "COMPLIANT_WITH_RESERVATIONS"
+        )
+
+        evidence_record = Evidence(
+            evidence_id=evidence_uuid,
+            tenant_id=parsed_tenant,
+            control_id=ctrl.control_id,
+            uploaded_by=parsed_uploader,
+            title=f"Automated VAPT Scan Finding [{cve_id}]",
+            description=(
+                f"VAPT vulnerability detected on {affected_product}. "
+                f"CVE: {cve_id}, CVSS: {cvss_score}. "
+                f"Status: {compliance_signal}."
+            ),
+            status=TenantStatus.ACTIVE,
+            uploaded_at=datetime.utcnow(),
+        )
+        db.add(evidence_record)
+
         persisted_risk_id = None
 
-        if ctrl:
-            evidence_record = Evidence(
-                evidence_id=evidence_uuid,
+        # Create a Risk Register entry for High/Critical findings.
+        if create_risk_entry and cvss_score >= 7.0:
+            impact_val = 5 if cvss_score >= 9.0 else 4
+            likelihood_val = 4
+            risk_score_val = impact_val * likelihood_val
+
+            risk_record = Risk(
+                risk_id=uuid.uuid4(),
                 tenant_id=parsed_tenant,
                 control_id=ctrl.control_id,
-                uploaded_by=parsed_uploader,
-                title=f"Automated VAPT Scan Finding [{cve_id}]",
-                description=(
-                    f"VAPT vulnerability detected on {affected_product}. "
-                    f"CVE: {cve_id}, CVSS: {cvss_score}. Status: {compliance_signal}."
+                title=(
+                    f"Technical Vulnerability Risk: {cve_id} "
+                    f"on {affected_product}"
                 ),
+                description=(
+                    f"Unmitigated high-severity vulnerability {cve_id} "
+                    f"(CVSS {cvss_score}) discovered on {affected_product}."
+                ),
+                likelihood=likelihood_val,
+                impact=impact_val,
+                risk_score=risk_score_val,
                 status=TenantStatus.ACTIVE,
-                uploaded_at=datetime.utcnow(),
+                created_by=parsed_uploader,
+                created_at=datetime.utcnow(),
             )
-            db.add(evidence_record)
-            persisted_evidence = True
+            db.add(risk_record)
+            await db.flush()
+            persisted_risk_id = str(risk_record.risk_id)
 
-            # If High/Critical CVSS, automatically raise Risk Register item
-            if create_risk_entry and cvss_score >= 7.0:
-                # Map CVSS to Likelihood (1-5) and Impact (1-5)
-                # CVSS 7.0-8.9 -> High (4), 9.0-10.0 -> Critical (5)
-                impact_val = 5 if cvss_score >= 9.0 else 4
-                likelihood_val = 4  # Confirmed vulnerability on target
-                risk_score_val = impact_val * likelihood_val
-
-                risk_record = Risk(
-                    risk_id=uuid.uuid4(),
-                    tenant_id=parsed_tenant,
-                    control_id=ctrl.control_id,
-                    title=f"Technical Vulnerability Risk: {cve_id} on {affected_product}",
-                    description=(
-                        f"Unmitigated high-severity vulnerability {cve_id} (CVSS {cvss_score}) "
-                        f"discovered on {affected_product}."
-                    ),
-                    likelihood=likelihood_val,
-                    impact=impact_val,
-                    risk_score=risk_score_val,
-                    status=TenantStatus.ACTIVE,
-                    created_by=parsed_uploader,
-                    created_at=datetime.utcnow(),
-                )
-                db.add(risk_record)
-                await db.flush()
-                persisted_risk_id = str(risk_record.risk_id)
-
-            await db.commit()
+        # Save the evidence and risk entry together.
+        await db.commit()
 
         evidence_payload = {
             "evidence_id": str(evidence_uuid),
-            "tenant_id": str(tenant_id),
+            "tenant_id": str(parsed_tenant),
             "title": f"Automated VAPT Scan Finding [{cve_id}]",
             "source_module": "Module 2 (Cyber Defense VAPT Engine)",
             "control_code": control_code,
             "cvss_score": cvss_score,
             "affected_product": affected_product,
-            "status": "EVIDENCE_ATTACHED" if persisted_evidence else "PROCESSED",
+            "status": "EVIDENCE_ATTACHED",
             "compliance_signal": compliance_signal,
-            "persisted_evidence": persisted_evidence,
+            "persisted_evidence": True,
             "created_risk_id": persisted_risk_id,
             "timestamp": datetime.utcnow().isoformat(),
         }
 
         return {
             "status": "SUCCESS",
-            "message": f"VAPT scan finding {cve_id} successfully mapped to GRC Control {control_code}.",
+            "message": (
+                f"VAPT scan finding {cve_id} successfully mapped to "
+                f"GRC Control {control_code}."
+            ),
             "evidence": evidence_payload,
         }
