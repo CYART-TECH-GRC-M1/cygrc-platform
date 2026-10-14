@@ -345,3 +345,76 @@ async def update_incident_case(
     await db.commit()
     await db.refresh(case)
     return case
+
+
+@router.post("/{case_id}/feed-to-grc")
+async def feed_case_to_grc_compliance_engine(
+    case_id: str,
+    control_code: str = "A.16.1.1",
+    tenant_id: str = Depends(get_current_tenant_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Export incident case investigation records and findings directly into
+    Module 1 GRC Compliance Control Engine as automated evidence for Incident Management controls.
+    """
+    from backend.models.evidence import Evidence
+    from backend.models.control import Control
+    from backend.models.tenant import TenantStatus
+
+    stmt = select(IncidentCase).where(
+        IncidentCase.case_id == case_id,
+        IncidentCase.tenant_id == tenant_id
+    )
+    result = await db.execute(stmt)
+    case = result.scalar_one_or_none()
+    if not case:
+        raise HTTPException(status_code=404, detail="Incident case not found")
+
+    def _to_uuid(val: Any) -> uuid.UUID:
+        if isinstance(val, uuid.UUID):
+            return val
+        try:
+            return uuid.UUID(str(val))
+        except (ValueError, TypeError):
+            return uuid.uuid5(uuid.NAMESPACE_DNS, str(val))
+
+    parsed_tenant = _to_uuid(tenant_id)
+
+    # Locate target control
+    stmt_ctrl = select(Control).where(Control.control_code == control_code)
+    ctrl_res = await db.execute(stmt_ctrl)
+    ctrl = ctrl_res.scalars().first()
+
+    evidence_uuid = uuid.uuid4()
+    persisted = False
+    if ctrl:
+        evidence_record = Evidence(
+            evidence_id=evidence_uuid,
+            tenant_id=parsed_tenant,
+            control_id=ctrl.control_id,
+            uploaded_by=parsed_tenant,
+            title=f"Incident Response Evidence: Case {case.case_number} - {case.title}",
+            description=(
+                f"NIST Phase: {case.nist_phase}, Severity: {case.severity}, Status: {case.status}. "
+                f"Summary: {case.summary or 'N/A'}. Linked Alerts: {len(case.alerts_linked or [])}."
+            ),
+            status=TenantStatus.ACTIVE,
+            uploaded_at=datetime.utcnow(),
+        )
+        db.add(evidence_record)
+        await db.commit()
+        await db.refresh(evidence_record)
+        persisted = True
+
+    return {
+        "status": "SUCCESS",
+        "persisted": persisted,
+        "message": f"Case {case.case_number} successfully linked as compliance evidence to Control {control_code}.",
+        "evidence_id": str(evidence_uuid),
+        "case_id": case.case_id,
+        "case_number": case.case_number,
+        "control_code": control_code,
+        "nist_phase": case.nist_phase,
+        "compliance_signal": "COMPLIANT" if case.status in ["RESOLVED", "CLOSED"] else "IN_PROGRESS",
+    }

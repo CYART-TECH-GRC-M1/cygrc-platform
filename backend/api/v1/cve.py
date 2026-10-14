@@ -85,14 +85,17 @@ async def calculate_vulnerability_priority(payload: PrioritizeCalculateRequest):
 async def feed_vapt_evidence_to_grc(
     payload: GRCEvidenceFeedRequest,
     tenant_id: str = Depends(get_current_tenant_id),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Feed VAPT scan results directly to Module 1 GRC Compliance Engine as automated evidence."""
-    result = GRCEvidenceBridgeService.feed_vapt_to_grc(
+    """Feed VAPT scan results directly to Module 1 GRC Compliance Engine as automated evidence & register risks for high-severity findings."""
+    result = await GRCEvidenceBridgeService.persist_vapt_evidence_and_risk(
+        db=db,
         cve_id=payload.cve_id,
         cvss_score=payload.cvss_score,
         affected_product=payload.affected_product,
         tenant_id=tenant_id,
-        control_code=payload.control_code or "A.12.6.1"
+        control_code=payload.control_code or "A.12.6.1",
+        create_risk_entry=True,
     )
     return result
 

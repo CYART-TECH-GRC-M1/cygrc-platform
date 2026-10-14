@@ -3,6 +3,8 @@ from backend.api.v1.tenants import router as tenants_router
 from backend.api.v1.users import router as users_router
 from backend.api.v1.frameworks import router as frameworks_router
 from backend.api.v1.controls import router as controls_router
+from backend.api.v1.risks import router as risks_router
+from backend.api.v1.evidence import router as evidence_router
 from backend.api.v1.auth import router as auth_router; from backend.api.v1.playbooks import router as playbooks_router
 
 # Day 1 - Day 6 Cyber Defense Routers
@@ -33,9 +35,11 @@ _protected_dependencies = [Depends(get_current_user)]
 api_router.include_router(tenants_router, prefix="/tenants", tags=["Tenants"])
 api_router.include_router(users_router, prefix="/users", tags=["Users"])
 
-# Developer 2 Module Routers (Compliance Frameworks & Controls)
+# Developer 2 Module Routers (Compliance Frameworks, Controls & Risk Register)
 api_router.include_router(frameworks_router, prefix="/frameworks", tags=["Frameworks"])
 api_router.include_router(controls_router, prefix="/controls", tags=["Controls"])
+api_router.include_router(risks_router, prefix="/risks", tags=["Risk Register"])
+api_router.include_router(evidence_router, prefix="/evidence", tags=["Compliance Evidence"])
 
 # Developer 3/4 Module Routers (Authentication & RBAC Security)
 api_router.include_router(auth_router, prefix="", tags=["Auth"])

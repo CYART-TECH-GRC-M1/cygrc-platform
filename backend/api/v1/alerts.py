@@ -145,14 +145,16 @@ async def wazuh_alert_listener(
 async def feed_siem_alert_to_control_status_engine(
     payload: ControlFeedRequest,
     tenant_id: str = Depends(get_current_tenant_id),
+    db: AsyncSession = Depends(get_db),
 ):
     """Feed Module 2 SIEM alert signals directly to Module 1 Control Status Engine as automated evidence."""
-    result = SIEMControlBridgeService.feed_siem_alerts_to_control_engine(
+    result = await SIEMControlBridgeService.persist_siem_alert_evidence(
+        db=db,
         alert_id=payload.alert_id,
         title=payload.title,
         severity=payload.severity,
         tenant_id=tenant_id,
-        control_id=payload.control_id or "A.5.1"
+        control_code_or_id=payload.control_id or "A.5.1"
     )
     return result
 
