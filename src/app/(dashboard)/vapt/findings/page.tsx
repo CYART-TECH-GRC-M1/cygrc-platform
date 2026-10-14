@@ -175,6 +175,36 @@ export default function VAPTFindingsPage() {
     }
   };
 
+  const [feedingGRC, setFeedingGRC] = useState<string | null>(null);
+  const [grcSuccessMsg, setGrcSuccessMsg] = useState<string | null>(null);
+
+  const handleFeedToGRC = async (finding: VulnerabilityFinding) => {
+    setFeedingGRC(finding.finding_id);
+    try {
+      const res = await fetch("/api/v1/vapt/cve/evidence/feed-to-grc", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "00000000-0000-0000-0000-00000000000a",
+        },
+        body: JSON.stringify({
+          cve_id: finding.cve_id || finding.finding_id,
+          cvss_score: finding.cvss_score || 7.5,
+          affected_product: finding.asset_id,
+          control_code: "A.12.6.1",
+        }),
+      });
+      if (res.ok) {
+        setGrcSuccessMsg(`Finding ${finding.finding_id} converted to Control A.12.6.1 evidence & synced to Risk Register!`);
+        setTimeout(() => setGrcSuccessMsg(null), 4000);
+      }
+    } catch (err) {
+      console.error("Failed to feed to GRC", err);
+    } finally {
+      setFeedingGRC(null);
+    }
+  };
+
   const handleCalculatePriority = async () => {
     try {
       const res = await fetch("/api/v1/vapt/cve/prioritize", {
