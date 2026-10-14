@@ -73,6 +73,36 @@ export default function RiskRegister() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [exportNotice, setExportNotice] = useState(false);
 
+  // Fetch real risks from Phase 9 backend API
+  useState(() => {
+    fetch("/api/v1/risks", {
+      headers: { "X-Tenant-ID": "00000000-0000-0000-0000-00000000000a" },
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: any[]) => {
+        if (data && data.length > 0) {
+          const mapped: RiskItem[] = data.map((d, idx) => {
+            const score = d.risk_score || 10;
+            let sev: RiskItem["severity"] = "Medium";
+            if (score >= 20) sev = "Critical";
+            else if (score >= 12) sev = "High";
+            else if (score >= 6) sev = "Medium";
+            else sev = "Low";
+
+            return {
+              id: `RSK-${String(idx + 1).padStart(3, "0")}`,
+              name: d.title,
+              owner: "Security Ops",
+              severity: sev,
+              status: d.status === "ACTIVE" ? "Open" : "Resolved",
+            };
+          });
+          setRisksList((prev) => [...mapped, ...prev]);
+        }
+      })
+      .catch(() => {});
+  });
+
   // Modal: Register New Risk
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newName, setNewName] = useState("");

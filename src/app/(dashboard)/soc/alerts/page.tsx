@@ -157,6 +157,32 @@ export default function SOCAlertQueuePage() {
     }
   };
 
+  const [feedSuccess, setFeedSuccess] = useState<string | null>(null);
+
+  const handleFeedToGRC = async (alert: Alert) => {
+    try {
+      const res = await fetch("/api/v1/alerts/feed-control-evidence", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "00000000-0000-0000-0000-00000000000a",
+        },
+        body: JSON.stringify({
+          alert_id: alert.alert_id,
+          title: alert.title,
+          severity: alert.severity,
+          control_id: "A.5.1",
+        }),
+      });
+      if (res.ok) {
+        setFeedSuccess(`Successfully mapped to GRC Control A.5.1 as automated evidence!`);
+        setTimeout(() => setFeedSuccess(null), 4000);
+      }
+    } catch (err) {
+      console.error("Failed to feed alert to GRC", err);
+    }
+  };
+
   const filteredAlerts = alerts.filter((a) => {
     if (!searchQuery) return true;
     return (
@@ -457,7 +483,21 @@ export default function SOCAlertQueuePage() {
               </div>
             </div>
 
+            {feedSuccess && (
+              <div className="mt-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-2.5 text-xs text-emerald-400 font-medium">
+                ✓ {feedSuccess}
+              </div>
+            )}
+
             <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-800 pt-4">
+              <button
+                onClick={() => handleFeedToGRC(selectedAlert)}
+                className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3.5 py-2 text-xs font-semibold text-indigo-300 hover:bg-indigo-500/20 transition flex items-center gap-1.5"
+              >
+                <Activity className="h-3.5 w-3.5" />
+                Feed to GRC Control (A.5.1)
+              </button>
+
               <button
                 onClick={() => handleUpdateStatus(selectedAlert.alert_id, "CLOSED")}
                 className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700 hover:text-white"
