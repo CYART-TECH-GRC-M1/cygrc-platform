@@ -10,7 +10,13 @@ export async function POST(req: Request) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    const body = await response.json();
+    const rawText = await response.text();
+    let body;
+    try {
+      body = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      body = { error: rawText || 'Authentication service error' };
+    }
     return NextResponse.json(body, { status: response.status });
   } catch {
     return NextResponse.json({ error: 'Failed to connect to backend auth service' }, { status: 500 });

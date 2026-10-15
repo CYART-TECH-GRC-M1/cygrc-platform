@@ -37,21 +37,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function login(email: string, password: string) {
     setLoading(true);
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
-    const res = await fetch(`${backendUrl}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const json = await res.json();
+    let res: Response;
+    try {
+      res = await fetch(`${backendUrl}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+    } catch {
+      setLoading(false);
+      throw new Error('Network error: Unable to connect to CyGRC backend server. Please verify the backend is running on port 8000.');
+    }
+
+    const rawText = await res.text();
+    let json: any = {};
+    try {
+      json = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      setLoading(false);
+      throw new Error(
+        res.status === 500
+          ? 'Backend server returned 500 Internal Server Error. Please verify the backend service is running on http://127.0.0.1:8000.'
+          : `Server returned HTTP ${res.status}: ${rawText || 'Non-JSON response'}`
+      );
+    }
+
     if (!res.ok || !json.access_token) {
       setLoading(false);
       throw new Error(json?.detail || json?.error || 'Login failed');
     }
 
-    const meRes = await fetch(`${backendUrl}/auth/me`, {
-      headers: { Authorization: `Bearer ${json.access_token}` },
-    });
-    const me = await meRes.json();
+    let meRes: Response;
+    try {
+      meRes = await fetch(`${backendUrl}/auth/me`, {
+        headers: { Authorization: `Bearer ${json.access_token}` },
+      });
+    } catch {
+      setLoading(false);
+      throw new Error('Network error loading user profile.');
+    }
+
+    const meText = await meRes.text();
+    let me: any = {};
+    try {
+      me = meText ? JSON.parse(meText) : {};
+    } catch {
+      setLoading(false);
+      throw new Error(`Profile service returned HTTP ${meRes.status}: ${meText}`);
+    }
+
     if (!meRes.ok) {
       setLoading(false);
       throw new Error(me?.detail || me?.error || 'Unable to load user profile');
