@@ -1,72 +1,82 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, status
 
+from backend.api.v1.risks import AuthContext, get_auth_context
 from backend.models.risk import DPDPBreachClock
-from backend.schemas.risk import DPDPBreachClockCreate, DPDPClockResponse
+from backend.schemas.risk import DPDPClockCreate, DPDPClockResponse
+
+BREACH_NOTIFICATION_HOURS = 72
 
 router = APIRouter(prefix="/api/v1", tags=["dpdp"])
 
-_breach_clock: DPDPBreachClock | None = None
+_clocks: dict[int, DPDPBreachClock] = {}
+_next_clock_id = 1
 
 
-def _build_response(clock: DPDPBreachClock) -> DPDPClockResponse:
-    now = datetime.now(timezone.utc)
-    hours_remaining = int((clock.deadline - now).total_seconds() // 3600)
-    if hours_remaining < 0:
-        status = "breach_deadline_exceeded"
-        message = "The 72-hour breach notification window has expired."
-    elif hours_remaining <= 24:
-        status = "critical"
-        message = "Urgent action required: breach reporting deadline is within 24 hours."
-    else:
-        status = "active"
-        message = "Breach clock is active and within the DPDP reporting window."
+def calculate_deadline(detected_at: datetime) -> datetime:
+    """Return the statutory 72-hour notification deadline."""
+    return detected_at + timedelta(hours=BREACH_NOTIFICATION_HOURS)
 
+
+def build_clock_response(
+    clock: DPDPBreachClock,
+    now: datetime | None = None,
+) -> DPDPClockResponse:
+    """Build a clock response with remaining time evaluated at request time."""
+    current_time = now or datetime.now(timezone.utc)
+    hours_remaining = (clock.deadline_at - current_time).total_seconds() / 3600
+    is_overdue = current_time > clock.deadline_at and clock.notified_at is None
+    response_status = "Overdue" if is_overdue else clock.status
     return DPDPClockResponse(
-        breach_detected_at=clock.breach_detected_at,
-        deadline=clock.deadline,
-        hours_remaining=max(hours_remaining, 0),
-        status=status,
-        jurisdiction=clock.jurisdiction,
-        message=message,
+        id=clock.id,
+        tenant_id=clock.tenant_id,
+        breach_description=clock.breach_description,
+        detected_at=clock.detected_at,
+        deadline_at=clock.deadline_at,
+        status=response_status,
+        hours_remaining=hours_remaining,
+        is_overdue=is_overdue,
+        notified_at=clock.notified_at,
     )
 
 
-@router.get("/dpdp/breach-clock", response_model=DPDPClockResponse)
-def get_breach_clock() -> DPDPClockResponse:
-    global _breach_clock
+@router.post(
+    "/dpdp/breach-clock",
+    response_model=DPDPClockResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_breach_clock(
+    payload: DPDPClockCreate,
+    auth: AuthContext = Depends(get_auth_context),
+) -> DPDPClockResponse:
+    """Start a tenant breach clock with a fixed 72-hour deadline."""
+    global _next_clock_id
 
-    if _breach_clock is None:
-        now = datetime.now(timezone.utc)
-        clock = DPDPBreachClock(
-            clock_id=1,
-            tenant_id=1,
-            breach_detected_at=now,
-            deadline=now + timedelta(hours=72),
-            hours_remaining=72,
-            jurisdiction="IN",
-            status="active",
-            created_at=now,
-        )
-        _breach_clock = clock
-
-    return _build_response(_breach_clock)
-
-
-@router.post("/dpdp/breach-clock", response_model=DPDPClockResponse)
-def create_breach_clock(payload: DPDPBreachClockCreate) -> DPDPClockResponse:
-    global _breach_clock
-
-    deadline = payload.breach_detected_at + timedelta(hours=payload.notification_deadline_hours)
-    _breach_clock = DPDPBreachClock(
-        clock_id=1,
-        tenant_id=1,
-        breach_detected_at=payload.breach_detected_at,
-        deadline=deadline,
-        hours_remaining=payload.notification_deadline_hours,
-        jurisdiction=payload.jurisdiction,
-        status="active",
-        created_at=datetime.now(timezone.utc),
+    now = datetime.now(timezone.utc)
+    clock = DPDPBreachClock(
+        id=_next_clock_id,
+        tenant_id=auth.tenant_id,
+        breach_description=payload.breach_description,
+        detected_at=payload.detected_at,
+        deadline_at=calculate_deadline(payload.detected_at),
+        status="Open",
+        notified_at=None,
+        created_at=now,
     )
-    return _build_response(_breach_clock)
+    _clocks[clock.id] = clock
+    _next_clock_id += 1
+    return build_clock_response(clock, now=now)
+
+
+@router.get("/dpdp/breach-clock", response_model=list[DPDPClockResponse])
+def get_breach_clocks(
+    auth: AuthContext = Depends(get_auth_context),
+) -> list[DPDPClockResponse]:
+    """List breach clocks for the authenticated tenant only."""
+    now = datetime.now(timezone.utc)
+    return [
+        build_clock_response(clock, now=now)
+        for clock in _clocks.values()
+        if clock.tenant_id == auth.tenant_id
+    ]
