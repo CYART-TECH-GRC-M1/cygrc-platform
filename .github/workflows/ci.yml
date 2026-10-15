@@ -5,7 +5,8 @@ on:
     branches:
       - main
       - develop
-      - feature/**
+      - "m2-develop-dfir"
+      - "feature/**"
   pull_request:
 
 jobs:
@@ -17,9 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-
         uses: actions/setup-python@v5
-
         with:
           python-version: "3.12"
 
@@ -29,15 +28,26 @@ jobs:
           ls -la
           find . -maxdepth 2
 
-      - name: Install Ruff
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install ruff
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
 
-      - name: Run Ruff (if Python code exists)
+      - name: Run Ruff (lint)
         run: |
           if find . -name "*.py" | grep -q .; then
-          ruff check .
+            ruff check .
           else
-          echo "No Python files found. Skipping lint."
+            echo "No Python files found. Skipping lint."
           fi
+
+      - name: Run Tests (pytest)
+        run: |
+          if find . -name "test_*.py" -o -name "*_test.py" | grep -q .; then
+            pytest --tb=short -q
+          else
+            echo "No test files found. Skipping tests."
+          fi
+
