@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from backend.audit.routes import router as audit_router
 
 app = FastAPI(
     title="CyGRC Platform API",
@@ -15,3 +16,4 @@ def home():
 @app.get("/health")
 def health():
     return {"status": "Healthy"}
+app.include_router(audit_router)

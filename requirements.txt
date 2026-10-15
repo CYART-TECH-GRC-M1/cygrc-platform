@@ -17,3 +17,5 @@ openai
 langchain
 langgraph
 pytest
+reportlab
+pypdf
