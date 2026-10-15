@@ -1,5 +1,4 @@
-from typing import Dict, Any
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException
 from backend.services.mitre_attack import MitreAttackService
 
 router = APIRouter()

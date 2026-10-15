@@ -3,7 +3,8 @@ from backend.api.v1.tenants import router as tenants_router
 from backend.api.v1.users import router as users_router
 from backend.api.v1.frameworks import router as frameworks_router
 from backend.api.v1.controls import router as controls_router
-from backend.api.v1.auth import router as auth_router; from backend.api.v1.playbooks import router as playbooks_router
+from backend.api.v1.auth import router as auth_router
+from backend.api.v1.playbooks import router as playbooks_router
 
 # Day 1 - Day 6 Cyber Defense Routers
 from backend.api.v1.alerts import router as alerts_router
@@ -22,6 +23,7 @@ from backend.api.v1.jira import router as jira_router
 from backend.api.v1.campaigns import router as campaigns_router
 from backend.api.v1.dfir import router as dfir_router
 from backend.api.v1.findings import router as findings_router
+from backend.api.v1.risks import router as risks_router
 
 from backend.core.dependencies import get_current_user
 
@@ -50,10 +52,12 @@ api_router.include_router(taxii2_router, prefix="/taxii2", tags=["Threat Intel -
 api_router.include_router(cases_router, prefix="/cases", tags=["SOC SIEM - Incident Cases"])
 api_router.include_router(cve_router, prefix="/vapt/cve", tags=["VAPT Scanner - CVE Feeds"])
 api_router.include_router(intel_feeds_router, prefix="/intel", tags=["Threat Intel - MISP & OpenCTI"])
-api_router.include_router(red_team_router, prefix="/redteam", tags=["Red Team - Atomic Red Team"]); api_router.include_router(playbooks_router, prefix="/playbooks", tags=["Playbooks"])
+api_router.include_router(red_team_router, prefix="/redteam", tags=["Red Team - Atomic Red Team"])
+api_router.include_router(playbooks_router, prefix="/playbooks", tags=["Playbooks"])
 api_router.include_router(mitre_router, prefix="/mitre", tags=["MITRE ATT&CK Matrix"])
 api_router.include_router(ai_router, prefix="/ai", tags=["Cyber AI & Guardrails"])
 api_router.include_router(jira_router, prefix="/vapt/jira", tags=["VAPT Scanner - Jira Push"])
 api_router.include_router(campaigns_router, prefix="/campaigns", tags=["Red Team - Campaigns"])
 api_router.include_router(dfir_router, prefix="/dfir", tags=["DFIR - Evidence Chain of Custody"])
 api_router.include_router(findings_router, prefix="/vapt/findings", tags=["VAPT Scanner - Findings"])
+api_router.include_router(risks_router, prefix="/risks", tags=["GRC - Risk Register"])

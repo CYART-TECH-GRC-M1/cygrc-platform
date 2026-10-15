@@ -27,7 +27,6 @@ from backend.models.incident_case import IncidentCase
 from backend.models.stix_object import StixObject
 from backend.services.alert_enrichment import AlertEnrichmentService
 from backend.services.atomic_runner import AtomicRunnerService
-from backend.services.ir_state_machine import IRWorkflowStateMachine
 from backend.services.jira_service import JiraIntegrationService
 from backend.services.scanner_adapters import (
     NmapScannerAdapter,
@@ -311,6 +310,7 @@ class PlaybookActionHandlers:
                 "searched_mailboxes": 142,
                 "purged_messages_count": 8,
                 "receipt_id": receipt_id,
+                "sender": sender,
                 "status": "PURGED",
             },
             evidence_reference=receipt_id,

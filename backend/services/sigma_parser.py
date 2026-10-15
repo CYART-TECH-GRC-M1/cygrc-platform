@@ -1,6 +1,5 @@
 import yaml
-import re
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 
 class SigmaParserService:
@@ -56,6 +55,7 @@ class SigmaParserService:
             "title": title,
             "wazuh_level": wazuh_level,
             "wazuh_xml": wazuh_xml,
+            "pattern": pattern,
             "sigma_meta": {
                 "title": title,
                 "level": level_str,

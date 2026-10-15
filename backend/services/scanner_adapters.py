@@ -7,16 +7,13 @@ Follows strict Phase 3 rules:
 - Supports documented test fixtures for isolated test environments.
 """
 import ipaddress
-import json
 import logging
 import os
 import re
 import shutil
 import subprocess
 import tempfile
-import uuid
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 

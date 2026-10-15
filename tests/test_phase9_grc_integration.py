@@ -12,7 +12,7 @@ from backend.models.tenant import TenantStatus
 from backend.models.tenant_control import TenantControlMapping
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_risk_register_lifecycle(make_token):
     tenant_id = str(uuid.uuid4())
     token = make_token(tenant_id=tenant_id, role="Compliance Manager")
@@ -75,7 +75,7 @@ async def test_risk_register_lifecycle(make_token):
         assert treat_resp.json()["status"] == "OPEN"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_siem_control_bridge_persistence(make_token):
     tenant_id = str(uuid.uuid4())
     headers = {"X-Tenant-ID": tenant_id}
@@ -121,7 +121,7 @@ async def test_siem_control_bridge_persistence(make_token):
         )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_vapt_evidence_and_risk_bridge(make_token):
     tenant_id = str(uuid.uuid4())
     headers = {"X-Tenant-ID": tenant_id}
@@ -188,7 +188,7 @@ async def test_vapt_evidence_and_risk_bridge(make_token):
         assert risk_data["risk_score"] == 20
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_incident_case_to_grc_export(make_token):
     tenant_id = str(uuid.uuid4())
     headers = {"X-Tenant-ID": tenant_id}

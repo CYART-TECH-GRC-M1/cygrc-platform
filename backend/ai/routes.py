@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.ai.capabilities import (
@@ -38,12 +38,8 @@ from backend.core.database import get_db
 from backend.core.dependencies import (
     get_current_tenant_id,
     get_current_user,
-    require_permission,
     require_role,
 )
-from backend.core.permissions import Permission
-from backend.core.ai_guardrails import CyberAIGuardrails
-from backend.services.ai_threat_analyzer import AIThreatAnalyzerService
 from backend.api.v1.ai_copilot import (
     AICopilotDraftRequest,
     AICopilotDraftResponse,

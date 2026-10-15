@@ -1,13 +1,12 @@
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from backend.models.stix_object import StixObject
 from backend.services.misp_client import MISPClient, MISPConfigurationError, MISPClientError
 from backend.services.opencti_client import OpenCTIClient, OpenCTIConfigurationError, OpenCTIClientError
-from backend.services.stix_validator import STIXValidator, STIXValidationError
 
 
 class IntelIntegrationService:

@@ -85,14 +85,16 @@ async def calculate_vulnerability_priority(payload: PrioritizeCalculateRequest):
 async def feed_vapt_evidence_to_grc(
     payload: GRCEvidenceFeedRequest,
     tenant_id: str = Depends(get_current_tenant_id),
+    db: AsyncSession = Depends(get_db),
 ):
     """Feed VAPT scan results directly to Module 1 GRC Compliance Engine as automated evidence."""
-    result = GRCEvidenceBridgeService.feed_vapt_to_grc(
+    result = await GRCEvidenceBridgeService.feed_vapt_to_grc(
         cve_id=payload.cve_id,
         cvss_score=payload.cvss_score,
         affected_product=payload.affected_product,
         tenant_id=tenant_id,
-        control_code=payload.control_code or "A.12.6.1"
+        control_code=payload.control_code or "A.12.6.1",
+        db=db,
     )
     return result
 
@@ -105,7 +107,7 @@ async def list_cves(
 ):
     stmt = select(CVEFinding)
     if cisa_kev_only:
-        stmt = stmt.where(CVEFinding.cisa_kev == True)
+        stmt = stmt.where(CVEFinding.cisa_kev.is_(True))
     if min_cvss is not None:
         stmt = stmt.where(CVEFinding.cvss_score >= min_cvss)
     stmt = stmt.order_by(CVEFinding.cvss_score.desc())

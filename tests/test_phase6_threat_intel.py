@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 sys.path.insert(0, ".")
 import uuid
 from datetime import datetime, timedelta
@@ -208,7 +208,7 @@ def test_misp_unconfigured_provider():
         assert fetch_resp.json()["status"] == "UNCONFIGURED"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_misp_live_client_mocked_fetch_and_sync():
     mock_misp_response = {
         "response": [
@@ -263,7 +263,7 @@ async def test_misp_live_client_mocked_fetch_and_sync():
         assert kwargs["json"]["limit"] == 25
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_misp_retry_and_backoff_on_transient_error():
     mock_error_resp = MagicMock()
     mock_error_resp.status_code = 503
@@ -321,7 +321,7 @@ def test_opencti_unconfigured_provider():
         assert resp.json()["status"] == "UNCONFIGURED"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_opencti_live_client_mocked_fetch_and_sync():
     mock_opencti_graphql = {
         "data": {

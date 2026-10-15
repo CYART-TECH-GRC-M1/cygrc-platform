@@ -103,7 +103,7 @@ def test_team_c_chain_of_custody_tamper_test():
 
     tamper_resp = client.post("/api/v1/chain-of-custody/transfer", json=transfer_payload, headers=HEADERS)
     # MUST be blocked with HTTP 400 Bad Request due to hash mismatch
-    assert tamper_resp.status_code == 400, f"Tamper test failed! Server accepted tampered hash."
+    assert tamper_resp.status_code == 400, "Tamper test failed! Server accepted tampered hash."
     assert "SHA-256 hash mismatch" in tamper_resp.json()["detail"]
     print("Tamper test PASSED: SHA-256 hash mismatch successfully blocked tampered transfer.")
 

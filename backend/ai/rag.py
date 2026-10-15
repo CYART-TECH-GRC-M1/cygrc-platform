@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Set, Tuple
-from sqlalchemy import select, and_, or_
+from typing import Dict, List, Optional, Tuple
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.permissions import Permission, has_permission
@@ -13,7 +13,6 @@ from backend.models.vulnerability_finding import VulnerabilityFinding
 from backend.models.cve_finding import CVEFinding
 from backend.models.stix_object import StixObject
 from backend.models.chain_of_custody import ChainOfCustody
-from backend.models.campaign import RedTeamCampaign, AtomicTestExecution
 
 logger = logging.getLogger("cygrc.ai.rag")
 

@@ -6,15 +6,14 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from backend.core.database import get_db
 from backend.core.dependencies import get_current_tenant_id
-from backend.models.alert import Alert, AlertSeverity, AlertStatus
+from backend.models.alert import Alert, AlertStatus
 from backend.services.alert_enrichment import AlertEnrichmentService
 from backend.services.alert_stream import AlertStreamBroker
 from backend.services.sigma_engine import SigmaEngine, SigmaRuleRegistry
-from backend.services.sigma_parser import SigmaParserService
 from backend.services.siem_control_bridge import SIEMControlBridgeService
 try:
     from backend.services.starter_rules import StarterRulesHarness
@@ -193,7 +192,7 @@ async def stream_realtime_alerts(
                     yield f"id: {event['id']}\nevent: {event['event']}\ndata: {json.dumps(event['data'])}\n\n"
                 except asyncio.TimeoutError:
                     loop_ticks += 1
-                    yield f": ping\n\n"
+                    yield ": ping\n\n"
                     # Exit gracefully after keepalive pings in non-streaming test harnesses
                     if loop_ticks >= 4:
                         break

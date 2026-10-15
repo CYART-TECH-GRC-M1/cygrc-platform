@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 
 class SIEMControlBridgeService:
@@ -20,6 +20,7 @@ class SIEMControlBridgeService:
 
         return {
             "status": "SUCCESS",
+            "persisted": True,
             "message": f"SIEM Alert '{title}' ({severity}) converted into automated compliance evidence for Control {control_id}.",
             "control_signal": {
                 "evidence_id": evidence_id,

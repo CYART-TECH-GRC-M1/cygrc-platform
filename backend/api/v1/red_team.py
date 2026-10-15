@@ -1,15 +1,13 @@
-import hashlib
-import uuid
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from backend.core.database import get_db
 from backend.core.dependencies import get_current_tenant_id
-from backend.models.campaign import AtomicTestExecution, DetectionVerificationRecord
+from backend.models.campaign import AtomicTestExecution
 from backend.services.atomic_runner import AtomicRunnerService
 from backend.services.caldera_service import CalderaService
 from backend.services.detection_verification import DetectionVerificationService

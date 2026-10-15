@@ -8,7 +8,7 @@ Implements MVP statistical baseline profiling:
 """
 import math
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 
 class UEBAEngine:

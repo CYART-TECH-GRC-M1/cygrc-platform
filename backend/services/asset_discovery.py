@@ -9,16 +9,14 @@ Features:
 """
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.audit import record_audit_log
 from backend.models.asset import Asset
 from backend.services.scanner_adapters import (
-    NmapScannerAdapter,
     CloudDiscoveryAdapters,
-    TargetScopeValidator,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,7 +55,6 @@ class AssetDiscoveryService:
                 tags.append(os_name.lower().split()[0])
 
             # Deduplication: Match on (tenant_id, ip_address) OR (tenant_id, hostname)
-            query_conditions = [Asset.tenant_id == tenant_id]
             match_conds = []
             if ip:
                 match_conds.append(Asset.ip_address == ip)

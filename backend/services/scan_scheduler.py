@@ -9,10 +9,9 @@ Features:
 """
 import json
 import logging
-import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Tuple
-from sqlalchemy import select, update, func
+from typing import Any, Dict, List, Optional
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.audit import record_audit_log

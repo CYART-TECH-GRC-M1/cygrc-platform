@@ -4,13 +4,14 @@ Endpoints conform to the existing API versioning scheme (v1). All routes are add
 `/api/v1/playbooks` via the router registration in `backend/api/router.py`.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import get_db
-from backend.core.dependencies import get_current_user, require_permission
+from backend.core.dependencies import require_permission
 from backend.models.user import User
 from backend.playbooks import (
     PlaybookDefinition,
@@ -18,7 +19,7 @@ from backend.playbooks import (
     PlaybookExecutionEngine,
     PlaybookApprovalService,
 )
-from backend.models.playbook import PlaybookExecution, PlaybookApprovalRecord
+from backend.models.playbook import PlaybookExecution
 
 router = APIRouter()
 
@@ -98,7 +99,7 @@ async def start_execution(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_permission("playbook:execute")),
 ) -> ExecutionResponse:
-    definition = await get_playbook_or_404(playbook_id)
+    await get_playbook_or_404(playbook_id)
     try:
         execution = await PlaybookExecutionEngine.execute_playbook(
             playbook_id=playbook_id,
@@ -193,7 +194,7 @@ async def approve_step(
             tenant_id=str(user.tenant_id),
             db=db,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         # If the execution is not waiting, just return info
         return {"status": "approval recorded, execution not pending"}
 

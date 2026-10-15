@@ -23,7 +23,6 @@ from backend.core.config import settings
 from backend.core.dependencies import get_current_user, require_role
 from backend.core.security import (
     create_access_token,
-    decode_token,
     get_password_hash,
     keycloak_password_login,
     validate_token,

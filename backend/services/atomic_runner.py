@@ -1,7 +1,6 @@
 import asyncio
 import hashlib
 import re
-import shlex
 import subprocess
 import time
 import uuid
@@ -13,7 +12,6 @@ from sqlalchemy import select
 from backend.core.config import settings
 from backend.models.asset import Asset
 from backend.models.campaign import RedTeamCampaign, RedTeamExecutionJob, AtomicTestExecution
-from backend.services.mitre_attack import MitreAttackService
 
 
 class AtomicRunnerService:

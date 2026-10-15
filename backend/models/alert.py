@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, JSON, Text, Enum as SQLEnum
+from sqlalchemy import Column, String, DateTime, JSON, Text
 import enum
 from backend.core.database import Base
 

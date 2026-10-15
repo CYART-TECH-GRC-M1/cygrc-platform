@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 
 class AIThreatAnalyzerService:
@@ -17,8 +17,8 @@ class AIThreatAnalyzerService:
         report_id = f"AI-RPT-{uuid.uuid4().hex[:8].upper()}"
 
         root_cause_analysis = (
-            f"Adversary initial access achieved via weaponized phishing email payload targeting unpatched endpoint. "
-            f"Observed secondary command and control traffic targeting external IP infrastructure."
+            "Adversary initial access achieved via weaponized phishing email payload targeting unpatched endpoint. "
+            "Observed secondary command and control traffic targeting external IP infrastructure."
         )
 
         executive_summary = (

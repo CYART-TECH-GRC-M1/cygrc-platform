@@ -1,11 +1,10 @@
-import uuid
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
+from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 
 from backend.models.alert import Alert
-from backend.models.campaign import DetectionVerificationRecord, AtomicTestExecution, RedTeamExecutionJob
+from backend.models.campaign import DetectionVerificationRecord
 
 
 class DetectionVerificationService:
@@ -47,7 +46,6 @@ class DetectionVerificationService:
         for alert in recent_alerts:
             title_upper = (alert.title or "").upper()
             desc_upper = (alert.description or "").upper()
-            source_upper = (alert.source or "").upper()
 
             # Check if alert references the MITRE technique ID or target
             technique_match = tid in title_upper or tid in desc_upper

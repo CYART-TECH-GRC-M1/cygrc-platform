@@ -46,7 +46,6 @@ class AIEvaluationRunner:
             category = item["category"]
             tenant_id = item["tenant_id"]
             user_roles = item.get("user_roles", ["SOC Lead"])
-            cap = item.get("capability")
             inp = item["input"]
             expected = item["expected"]
 
@@ -136,7 +135,7 @@ class AIEvaluationRunner:
                     try:
                         CyberAIFoundationGuardrails.validate_draft_output(test_data)
                         notes = "Failed: Invalid schema without watermark was accepted"
-                    except HTTPException as exc:
+                    except HTTPException:
                         test_passed = True
                         notes = "Guardrails strictly rejected output without draft watermark"
 

@@ -1,11 +1,10 @@
 import asyncio
 import uuid
-from datetime import datetime
 from typing import Dict, Any, List, Optional
 import httpx
 
 from backend.core.config import settings
-from backend.services.stix_validator import STIXValidator, STIXValidationError
+from backend.services.stix_validator import STIXValidator
 
 
 class OpenCTIConfigurationError(Exception):

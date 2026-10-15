@@ -7,11 +7,10 @@ Features:
 - Reconnection support with Last-Event-ID replay caching.
 """
 import asyncio
-import json
 import logging
 from collections import deque
 from datetime import datetime, timezone
-from typing import Any, Deque, Dict, Optional, Set
+from typing import Any, Deque, Dict, Set
 
 logger = logging.getLogger(__name__)
 

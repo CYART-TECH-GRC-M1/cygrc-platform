@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Optional
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 
 from backend.core.dependencies import get_current_tenant_id
@@ -55,10 +55,10 @@ async def generate_ai_soc_draft(
     ctx = payload.context_text or "Security Event Alert"
 
     triage_questions = [
-        f"Was process execution authorized by system user or service account?",
+        "Was process execution authorized by system user or service account?",
         f"Has external IP in alert '{ctx[:40]}' communicated with other internal subnets?",
-        f"Are there any secondary persistence mechanisms created in Windows Registry or Systemd?",
-        f"Does endpoint have active Endpoint Detection & Response (EDR) isolation capability?"
+        "Are there any secondary persistence mechanisms created in Windows Registry or Systemd?",
+        "Does endpoint have active Endpoint Detection & Response (EDR) isolation capability?"
     ]
 
     case_notes = (

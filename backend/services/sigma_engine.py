@@ -10,11 +10,11 @@ Features:
 - Rule test harness for known-good/known-bad evaluation.
 """
 import copy
+import json
 import re
-import uuid
 import yaml
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class SigmaParseError(Exception):

@@ -1,8 +1,8 @@
 import hashlib
 import uuid
 from datetime import datetime
-from typing import Optional, Dict, Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional, Dict, Any
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 

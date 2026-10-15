@@ -2,7 +2,7 @@ import json
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 from fastapi import HTTPException, status
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,8 +56,6 @@ from backend.ai.schemas import (
 from backend.core.audit import record_audit_log
 from backend.models.ai_approval import AIActionApproval
 from backend.models.incident_case import IncidentCase
-from backend.models.asset import Asset
-from backend.models.vulnerability_finding import VulnerabilityFinding
 
 logger = logging.getLogger("cygrc.ai.capabilities")
 

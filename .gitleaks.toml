@@ -1,0 +1,19 @@
+[extend]
+useDefault = true
+
+[[rules]]
+description = "Allow dummy JWT placeholder in API documentation"
+id = "doc-jwt-placeholder"
+regex = '''<JWT_ACCESS_TOKEN_PLACEHOLDER>'''
+tags = ["documentation"]
+
+[allowlist]
+description = "Documentation markdown files and test fixture tokens"
+paths = [
+    '''docs/.*\.md''',
+    '''\.env\.example''',
+]
+regexes = [
+    '''VALID-[A-Z]+-[A-Z]+-\d+''',
+    '''MISP_VERIFY_SSL''',
+]

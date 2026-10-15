@@ -9,7 +9,6 @@ Handles:
 - Structured failure logging.
 """
 import hashlib
-import json
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
@@ -124,11 +123,6 @@ class WazuhIngestionService:
 
         source_event_id = normalized["source_event_id"]
 
-        # Check for existing alert with same source_event_id in this tenant (Idempotency)
-        stmt = select(Alert).where(
-            Alert.tenant_id == tenant_id,
-            Alert.description.contains(f"SourceEventID: {source_event_id}") if False else None
-        )
         # Check raw payload or description for idempotent deduplication
         existing_stmt = select(Alert).where(
             Alert.tenant_id == tenant_id,

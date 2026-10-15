@@ -1,5 +1,5 @@
 from typing import List, Optional, Any, Dict
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,8 +10,6 @@ from backend.core.dependencies import get_current_tenant_id
 from backend.models.campaign import (
     RedTeamCampaign,
     RedTeamExecutionJob,
-    AtomicTestExecution,
-    CampaignReport,
 )
 from backend.services.mitre_attack import MitreAttackService
 from backend.services.atomic_runner import AtomicRunnerService
