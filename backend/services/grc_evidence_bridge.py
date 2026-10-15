@@ -1,0 +1,72 @@
+import uuid
+from datetime import datetime
+from typing import Dict, Any, Optional
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.models.risk import RiskRegister
+
+
+class GRCEvidenceBridgeService:
+    """Feeds VAPT vulnerability scan findings directly into Module 1 GRC Compliance Control Engine."""
+
+    @staticmethod
+    async def feed_vapt_to_grc(
+        cve_id: str,
+        cvss_score: float,
+        affected_product: str,
+        tenant_id: str,
+        control_code: str = "A.12.6.1",  # Technical Vulnerability Management
+        db: Optional[AsyncSession] = None,
+    ) -> Dict[str, Any]:
+        evidence_id = f"EVID-GRC-{uuid.uuid4().hex[:8].upper()}"
+        compliance_signal = "NON_COMPLIANT" if cvss_score >= 7.0 else "COMPLIANT_WITH_RESERVATIONS"
+
+        # Persist a risk register entry for this vulnerability finding
+        created_risk_id: Optional[str] = None
+        persisted_evidence = False
+        if db is not None:
+            risk_score = min(int(cvss_score * 2), 20)  # scale CVSS 0-10 → risk score 0-20
+            likelihood = min(int(cvss_score / 2), 5) or 1
+            impact = min(int(cvss_score / 2) + 1, 5)
+            risk = RiskRegister(
+                tenant_id=tenant_id,
+                title=f"CVE Vulnerability: {cve_id} in {affected_product}",
+                description=(
+                    f"Automated risk entry created from VAPT scan finding. "
+                    f"CVE: {cve_id}, CVSS: {cvss_score}, Product: {affected_product}, Control: {control_code}"
+                ),
+                likelihood=likelihood,
+                impact=impact,
+                risk_score=risk_score,
+                status="ACTIVE",
+                source="VAPT_SCAN",
+            )
+            db.add(risk)
+            await db.commit()
+            await db.refresh(risk)
+            created_risk_id = str(risk.risk_id)
+            persisted_evidence = True
+
+        evidence_payload = {
+            "evidence_id": evidence_id,
+            "tenant_id": tenant_id,
+            "title": f"Automated VAPT Scan Finding [{cve_id}]",
+            "source_module": "Module 2 (Cyber Defense VAPT Engine)",
+            "control_code": control_code,
+            "cvss_score": cvss_score,
+            "affected_product": affected_product,
+            "status": "EVIDENCE_ATTACHED",
+            "compliance_signal": compliance_signal,
+            "persisted_evidence": persisted_evidence,
+            "created_risk_id": created_risk_id,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        return {
+            "status": "SUCCESS",
+            "message": (
+                f"VAPT scan finding {cve_id} successfully mapped to GRC Control {control_code} "
+                f"as automated compliance evidence."
+            ),
+            "evidence": evidence_payload,
+        }

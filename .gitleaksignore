@@ -1,0 +1,16 @@
+# .gitleaksignore — fingerprints of known false-positive detections.
+# Each line is: <commit-sha>:<file-path>:<rule-id>:<line-number>
+#
+# These are NOT real credentials. Justifications documented inline.
+
+# docs/api.md line 128 — example JWT placeholder in API documentation (historical commit).
+# The token format triggered generic-api-key detection. Replaced in current code with <JWT_ACCESS_TOKEN_PLACEHOLDER>.
+804af2bf242ead10265d5f051dec10f24ea52943:docs/api.md:generic-api-key:128
+
+# .env.example line 24 — MISP_VERIFY_SSL=true flagged because MISP_API_KEY= appears on the preceding line.
+# This is a public example environment file with no real credentials; SSL verification setting is not a secret.
+6972b1fec5b2fae6624a32336cb19614804cdd52:.env.example:generic-api-key:24
+
+# tests/test_phase2_soc.py line 217 — signoff_approval_token: "VALID-LEAD-SIGNOFF-456" is a test fixture value.
+# This token is used exclusively in unit tests to exercise the approval flow; it has no real authorization value.
+227b24183d68ac03cd8215d5d293d7ce05a579f3:tests/test_phase2_soc.py:generic-api-key:217

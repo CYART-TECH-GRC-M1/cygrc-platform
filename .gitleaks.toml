@@ -1,0 +1,14 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documentation markdown files, .gitleaksignore, and test fixture tokens"
+paths = [
+    '''docs/.*\.md''',
+    '''\.env\.example''',
+    '''\.gitleaksignore''',
+]
+regexes = [
+    '''VALID-[A-Z]+-[A-Z]+-\d+''',
+    '''MISP_VERIFY_SSL''',
+]

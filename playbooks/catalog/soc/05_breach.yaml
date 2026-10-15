@@ -1,0 +1,115 @@
+id: "pb-soc-breach"
+version: "1.0.0"
+name: "Enterprise Data Breach Incident Response"
+discipline: "SOC"
+status: "ACTIVE"
+description: "Master Incident Response orchestration for major data breach events, multi-alert correlation, forensic handoff, containment perimeter enforcement, and case closure preparation."
+intended_use: "Execute when an enterprise-wide unauthorized data access, exfiltration event, or critical infrastructure compromise occurs."
+preconditions:
+  - check: "case_id_provided"
+    condition: "is_not_empty"
+authorized_target_types:
+  - "case"
+  - "tenant"
+  - "alert"
+required_permissions:
+  - "playbook:execute"
+inputs:
+  case_id:
+    type: "string"
+    required: true
+    description: "NIST incident case UUID"
+  breach_vector:
+    type: "string"
+    required: false
+    default: "WEB_APPLICATION_COMPROMISE"
+    description: "Primary suspected initial intrusion vector"
+steps:
+  - id: "step_1_correlate_alerts"
+    name: "Correlate All Active Tenant SIEM Alerts"
+    action: "correlate_tenant_alerts"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      case_id: "${inputs.case_id}"
+    timeout_seconds: 45
+    retry_policy:
+      max_retries: 2
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "ALERT_CORRELATION_MAP"
+    ignore_failure: false
+
+  - id: "step_2_forensic_handoff"
+    name: "Dispatch Case-to-Forensics Handoff"
+    action: "dispatch_forensics_collection"
+    classification: "SENSITIVE_DISRUPTIVE"
+    requires_approval: true
+    approval_role: "SOC Lead"
+    input_mapping:
+      case_id: "${inputs.case_id}"
+    timeout_seconds: 90
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 2.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "DFIR_HANDOFF_RECEIPT"
+    ignore_failure: false
+
+  - id: "step_3_containment_perimeter"
+    name: "Enforce Perimeter Network Isolation"
+    action: "enforce_containment_perimeter"
+    classification: "DESTRUCTIVE"
+    requires_approval: true
+    approval_role: "Tenant Admin"
+    input_mapping:
+      case_id: "${inputs.case_id}"
+    timeout_seconds: 120
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 3.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "PERIMETER_FIREWALL_BLOCK"
+    ignore_failure: false
+
+  - id: "step_4_closure_summary"
+    name: "Generate Executive Incident Closure Summary"
+    action: "generate_case_closure_summary"
+    classification: "READ_ONLY"
+    requires_approval: false
+    approval_role: "SOC Lead"
+    input_mapping:
+      case_id: "${inputs.case_id}"
+    timeout_seconds: 45
+    retry_policy:
+      max_retries: 1
+      backoff_seconds: 1.0
+    evidence_requirements:
+      record_evidence: true
+      evidence_type: "CLOSURE_REPORT"
+    ignore_failure: false
+
+success_conditions:
+  - "all_required_steps_succeeded"
+failure_conditions:
+  - "any_critical_step_failed"
+audit_metadata:
+  author: "CyGRC SecOps Architecture"
+  created_at: "2026-10-13T00:00:00Z"
+  updated_at: "2026-10-13T00:00:00Z"
+  tags:
+    - "breach"
+    - "enterprise-ir"
+    - "nist-800-61"
+  compliance_mappings:
+    - framework: "NIST SP 800-61"
+      control: "IR-4"
+    - framework: "ISO 27001"
+      control: "A.16.1.1"
+  references:
+    - "https://www.cisa.gov/resources-tools/resources/cyber-incident-response-plan"
+
