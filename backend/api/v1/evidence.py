@@ -26,6 +26,7 @@ from backend.core.dependencies import get_current_user
 from backend.models.control import Control
 from backend.models.evidence import Evidence, EvidenceRequirement
 from backend.models.user import User
+from backend.models.tenant_control import TenantControlMapping
 from backend.schemas.evidence import (
     EvidenceDetailResponse,
     EvidenceUploadResponse,
@@ -109,8 +110,19 @@ async def upload_evidence(
             detail=f"File type not allowed. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
         )
 
-    if not (await db.execute(select(Control.control_id).where(Control.control_id == control_id))).first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Control not found.")
+    control_mapping = await db.execute(
+        select(TenantControlMapping.mapping_id).where(
+            TenantControlMapping.tenant_id == tenant_id,
+            TenantControlMapping.control_id == control_id,
+            TenantControlMapping.status == "ACTIVE",
+        )
+    )
+
+    if not control_mapping.first():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Control not found for this tenant.",
+        )
 
     if requirement_id:
         req = await db.execute(
