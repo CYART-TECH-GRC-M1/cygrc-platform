@@ -1,34 +1,32 @@
+import asyncio
 import hashlib
 import os
 import re
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from backend.core.database import get_db
 from backend.core.dependencies import get_current_user
 from backend.models.control import Control
-from backend.models.evidence import Evidence, EvidenceFile, EvidenceReview
+from backend.models.evidence import Evidence, EvidenceRequirement
 from backend.models.user import User
 from backend.schemas.evidence import (
-    EvidenceCreate,
     EvidenceDetailResponse,
-    EvidenceFileUploadResponse,
-    EvidenceResponse,
-    EvidenceReviewCreate,
-    EvidenceReviewResponse,
-    EvidenceUpdate,
+    EvidenceUploadResponse,
+    EvidenceVerifyResponse,
 )
 
-UPLOAD_DIR = Path(os.getenv("EVIDENCE_UPLOAD_DIR", "uploads/evidence")).resolve()
+S3_BUCKET = os.getenv("EVIDENCE_S3_BUCKET")
+LOCAL_DIR = Path(os.getenv("EVIDENCE_UPLOAD_DIR", "uploads/evidence")).resolve()
 MAX_UPLOAD_BYTES = int(os.getenv("EVIDENCE_MAX_UPLOAD_MB", "20")) * 1024 * 1024
-ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt", ".csv", ".docx", ".xlsx", ".log"}
+ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".txt", ".csv", ".docx", ".xlsx", ".log", ".json"}
 
 router = APIRouter()
 
@@ -43,65 +41,145 @@ def _uuid_claim(user: Dict[str, Any], key: str) -> UUID:
         )
 
 
-async def _get_owned_evidence(
-    db: AsyncSession, evidence_id: UUID, tenant_id: UUID
-) -> Evidence:
+async def _store_blob(tmp_path: str, key: str) -> None:
+    if S3_BUCKET:
+        import boto3
+
+        await asyncio.to_thread(boto3.client("s3").upload_file, tmp_path, S3_BUCKET, key)
+    else:
+        dest = LOCAL_DIR / key
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(shutil.copyfile, tmp_path, dest)
+
+
+def _hash_blob_sync(key: str) -> str:
+    sha = hashlib.sha256()
+    if S3_BUCKET:
+        import boto3
+
+        body = boto3.client("s3").get_object(Bucket=S3_BUCKET, Key=key)["Body"]
+        for chunk in body.iter_chunks(1024 * 1024):
+            sha.update(chunk)
+    else:
+        path = (LOCAL_DIR / key).resolve()
+        if LOCAL_DIR not in path.parents or not path.is_file():
+            raise FileNotFoundError(key)
+        with open(path, "rb") as f:
+            while chunk := f.read(1024 * 1024):
+                sha.update(chunk)
+    return sha.hexdigest()
+
+
+async def _get_owned_evidence(db: AsyncSession, evidence_id: UUID, tenant_id: UUID) -> Evidence:
     result = await db.execute(
-        select(Evidence)
-        .options(selectinload(Evidence.files), selectinload(Evidence.reviews))
-        .where(Evidence.evidence_id == evidence_id, Evidence.tenant_id == tenant_id)
+        select(Evidence).where(Evidence.evidence_id == evidence_id, Evidence.tenant_id == tenant_id)
     )
     evidence = result.scalars().first()
     if not evidence:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Evidence not found."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence not found.")
     return evidence
 
 
-async def _require_tenant_user(db: AsyncSession, user_id: UUID, tenant_id: UUID) -> None:
-    found = await db.execute(
-        select(User.user_id).where(User.user_id == user_id, User.tenant_id == tenant_id)
-    )
-    if not found.first():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Authenticated user does not exist in this tenant.",
-        )
-
-
-@router.post("/", response_model=EvidenceResponse, status_code=status.HTTP_201_CREATED)
-async def create_evidence(
-    payload: EvidenceCreate,
+@router.post("/", response_model=EvidenceUploadResponse, status_code=status.HTTP_201_CREATED)
+async def upload_evidence(
+    control_id: UUID = Form(...),
+    title: str = Form(..., min_length=1, max_length=255),
+    description: Optional[str] = Form(None),
+    requirement_id: Optional[UUID] = Form(None),
+    file: UploadFile = File(...),
     user: Dict[str, Any] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     tenant_id = _uuid_claim(user, "tenant_id")
     user_id = _uuid_claim(user, "user_id")
 
-    control = await db.execute(
-        select(Control.control_id).where(Control.control_id == payload.control_id)
-    )
-    if not control.first():
+    original_name = Path(file.filename or "").name
+    if not original_name or Path(original_name).suffix.lower() not in ALLOWED_EXTENSIONS:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Control not found."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File type not allowed. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
         )
-    await _require_tenant_user(db, user_id, tenant_id)
+
+    if not (await db.execute(select(Control.control_id).where(Control.control_id == control_id))).first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Control not found.")
+
+    if requirement_id:
+        req = await db.execute(
+            select(EvidenceRequirement.requirement_id).where(
+                EvidenceRequirement.requirement_id == requirement_id,
+                EvidenceRequirement.tenant_id == tenant_id,
+                EvidenceRequirement.control_id == control_id,
+            )
+        )
+        if not req.first():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Requirement not found for this control.",
+            )
+
+    uploader = await db.execute(
+        select(User.user_id).where(User.user_id == user_id, User.tenant_id == tenant_id)
+    )
+    if not uploader.first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Authenticated user does not exist in this tenant.",
+        )
+
+    # Stream to a temp file while hashing and enforcing the size limit.
+    sha = hashlib.sha256()
+    size = 0
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        tmp_path = tmp.name
+        try:
+            while chunk := await file.read(1024 * 1024):
+                size += len(chunk)
+                if size > MAX_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"File exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB limit.",
+                    )
+                sha.update(chunk)
+                tmp.write(chunk)
+        except Exception:
+            os.unlink(tmp_path)
+            raise
+
+    evidence_id = uuid4()
+    safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", original_name)[:200]
+    key = f"{tenant_id}/{evidence_id}/{safe_name}"
+
+    try:
+        await _store_blob(tmp_path, key)
+    finally:
+        os.unlink(tmp_path)
 
     evidence = Evidence(
+        evidence_id=evidence_id,
         tenant_id=tenant_id,
-        control_id=payload.control_id,
+        control_id=control_id,
+        requirement_id=requirement_id,
         uploaded_by=user_id,
-        title=payload.title,
-        description=payload.description,
+        title=title,
+        description=description,
+        blob_s3_key=key,
+        sha256=sha.hexdigest(),
+        file_name=original_name,
+        file_size=size,
+        content_type=file.content_type,
     )
     db.add(evidence)
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception:
+        if not S3_BUCKET:
+            (LOCAL_DIR / key).unlink(missing_ok=True)
+        raise
     await db.refresh(evidence)
     return evidence
 
 
-@router.get("/", response_model=List[EvidenceResponse])
+@router.get("/", response_model=List[EvidenceDetailResponse])
 async def list_evidence(
     control_id: Optional[UUID] = None,
     skip: int = 0,
@@ -114,8 +192,7 @@ async def list_evidence(
     if control_id:
         query = query.where(Evidence.control_id == control_id)
     query = query.order_by(Evidence.uploaded_at.desc()).offset(skip).limit(min(limit, 500))
-    result = await db.execute(query)
-    return result.scalars().all()
+    return (await db.execute(query)).scalars().all()
 
 
 @router.get("/{evidence_id}", response_model=EvidenceDetailResponse)
@@ -127,154 +204,23 @@ async def get_evidence(
     return await _get_owned_evidence(db, evidence_id, _uuid_claim(user, "tenant_id"))
 
 
-@router.put("/{evidence_id}", response_model=EvidenceResponse)
-async def update_evidence(
+@router.get("/{evidence_id}/verify", response_model=EvidenceVerifyResponse)
+async def verify_evidence(
     evidence_id: UUID,
-    payload: EvidenceUpdate,
     user: Dict[str, Any] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """Re-hash the stored blob and compare with the SHA-256 recorded at upload."""
     evidence = await _get_owned_evidence(db, evidence_id, _uuid_claim(user, "tenant_id"))
-    for field, value in payload.model_dump(exclude_unset=True).items():
-        setattr(evidence, field, value)
-    await db.commit()
-    await db.refresh(evidence)
-    return evidence
-
-
-@router.delete("/{evidence_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_evidence(
-    evidence_id: UUID,
-    user: Dict[str, Any] = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    evidence = await _get_owned_evidence(db, evidence_id, _uuid_claim(user, "tenant_id"))
-    await db.delete(evidence)
-    await db.commit()
-    return None
-
-
-@router.post(
-    "/{evidence_id}/files",
-    response_model=EvidenceFileUploadResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def upload_evidence_file(
-    evidence_id: UUID,
-    file: UploadFile = File(...),
-    user: Dict[str, Any] = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    tenant_id = _uuid_claim(user, "tenant_id")
-    evidence = await _get_owned_evidence(db, evidence_id, tenant_id)
-
-    original_name = Path(file.filename or "").name
-    ext = Path(original_name).suffix.lower()
-    if not original_name or ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File type not allowed. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
-        )
-
-    safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", original_name)[:200]
-    target_dir = UPLOAD_DIR / str(tenant_id) / str(evidence.evidence_id)
-    target_dir.mkdir(parents=True, exist_ok=True)
-    target = target_dir / f"{uuid4().hex}_{safe_name}"
-
-    sha = hashlib.sha256()
-    size = 0
+    if not evidence.blob_s3_key or not evidence.sha256:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence has no stored file.")
     try:
-        with open(target, "wb") as out:
-            while chunk := await file.read(1024 * 1024):
-                size += len(chunk)
-                if size > MAX_UPLOAD_BYTES:
-                    raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail=f"File exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)} MB limit.",
-                    )
-                sha.update(chunk)
-                out.write(chunk)
+        computed = await asyncio.to_thread(_hash_blob_sync, evidence.blob_s3_key)
     except Exception:
-        target.unlink(missing_ok=True)
-        raise
-
-    record = EvidenceFile(
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Stored file not available.")
+    return EvidenceVerifyResponse(
         evidence_id=evidence.evidence_id,
-        file_name=original_name,
-        file_path=str(target),
-        file_size=size,
-        file_type=file.content_type,
+        stored_sha256=evidence.sha256,
+        computed_sha256=computed,
+        intact=(computed == evidence.sha256),
     )
-    db.add(record)
-    try:
-        await db.commit()
-    except Exception:
-        target.unlink(missing_ok=True)
-        raise
-    await db.refresh(record)
-
-    return EvidenceFileUploadResponse(
-        file_id=record.file_id,
-        evidence_id=record.evidence_id,
-        file_name=record.file_name,
-        file_size=record.file_size,
-        file_type=record.file_type,
-        uploaded_at=record.uploaded_at,
-        sha256=sha.hexdigest(),
-    )
-
-
-@router.get("/{evidence_id}/files/{file_id}/download")
-async def download_evidence_file(
-    evidence_id: UUID,
-    file_id: UUID,
-    user: Dict[str, Any] = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    evidence = await _get_owned_evidence(db, evidence_id, _uuid_claim(user, "tenant_id"))
-    record = next((f for f in evidence.files if f.file_id == file_id), None)
-    if not record:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found.")
-
-    path = Path(record.file_path).resolve()
-    if UPLOAD_DIR not in path.parents or not path.is_file():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not available.")
-    return FileResponse(path, filename=record.file_name)
-
-
-@router.post(
-    "/{evidence_id}/reviews",
-    response_model=EvidenceReviewResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def review_evidence(
-    evidence_id: UUID,
-    payload: EvidenceReviewCreate,
-    user: Dict[str, Any] = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    tenant_id = _uuid_claim(user, "tenant_id")
-    reviewer_id = _uuid_claim(user, "user_id")
-    evidence = await _get_owned_evidence(db, evidence_id, tenant_id)
-    await _require_tenant_user(db, reviewer_id, tenant_id)
-
-    review = EvidenceReview(
-        evidence_id=evidence.evidence_id,
-        reviewer_id=reviewer_id,
-        review_status=payload.review_status,
-        comments=payload.comments,
-    )
-    db.add(review)
-    await db.commit()
-    await db.refresh(review)
-    return review
-
-
-@router.get("/{evidence_id}/reviews", response_model=List[EvidenceReviewResponse])
-async def list_evidence_reviews(
-    evidence_id: UUID,
-    user: Dict[str, Any] = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    evidence = await _get_owned_evidence(db, evidence_id, _uuid_claim(user, "tenant_id"))
-    return evidence.reviews
