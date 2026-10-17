@@ -8,7 +8,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -182,8 +191,8 @@ async def upload_evidence(
 @router.get("/", response_model=List[EvidenceDetailResponse])
 async def list_evidence(
     control_id: Optional[UUID] = None,
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
     user: Dict[str, Any] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -191,7 +200,7 @@ async def list_evidence(
     query = select(Evidence).where(Evidence.tenant_id == tenant_id)
     if control_id:
         query = query.where(Evidence.control_id == control_id)
-    query = query.order_by(Evidence.uploaded_at.desc()).offset(skip).limit(min(limit, 500))
+    query = query.order_by(Evidence.uploaded_at.desc()).offset(skip).limit(limit)
     return (await db.execute(query)).scalars().all()
 
 
